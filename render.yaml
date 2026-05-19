@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: peony-collective
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: PHONE_NUMBER_ID
+        value: "1096711590199347"
+      - key: VERIFY_TOKEN
+        value: "peony2026"
+      - key: PORT
+        value: "3000"

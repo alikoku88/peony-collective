@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peony Collective — WhatsApp Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --rose: #f43f8e;
+  --rose-light: #fce7f3;
+  --rose-mid: #fbcfe8;
+  --rose-dark: #be185d;
+  --blush: #fdf2f8;
+  --cream: #fffbf9;
+  --white: #ffffff;
+  --text: #1c1012;
+  --text-mid: #6b3a4d;
+  --text-soft: #9d7483;
+  --border: #fce7f3;
+  --shadow: 0 4px 24px rgba(244,63,142,0.08);
+  --shadow-hover: 0 8px 40px rgba(244,63,142,0.16);
+  --radius: 16px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--text); min-height:100vh; }
+
+/* LOGIN */
+#login-screen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fff0f6 50%, #fce7f3 100%);
+  position:relative; overflow:hidden;
+}
+#login-screen::before {
+  content:''; position:absolute; width:600px; height:600px; border-radius:50%;
+  background: radial-gradient(circle, rgba(244,63,142,0.06) 0%, transparent 70%);
+  top:-100px; right:-100px;
+}
+#login-screen::after {
+  content:''; position:absolute; width:400px; height:400px; border-radius:50%;
+  background: radial-gradient(circle, rgba(244,63,142,0.04) 0%, transparent 70%);
+  bottom:-50px; left:-50px;
+}
+.login-card {
+  background:var(--white); border-radius:24px; padding:56px 48px;
+  width:420px; box-shadow:0 20px 80px rgba(244,63,142,0.12);
+  position:relative; z-index:1;
+}
+.login-logo { text-align:center; margin-bottom:40px; }
+.login-logo .petal { font-size:32px; margin-bottom:12px; }
+.login-logo h1 { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:600; color:var(--text); letter-spacing:0.02em; }
+.login-logo p { font-size:13px; color:var(--text-soft); margin-top:4px; }
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; font-size:12px; font-weight:500; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+.form-group input {
+  width:100%; padding:14px 16px; border:1.5px solid var(--border);
+  border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px;
+  color:var(--text); background:var(--blush); outline:none; transition:.2s;
+}
+.form-group input:focus { border-color:var(--rose); background:var(--white); }
+.btn-primary {
+  width:100%; padding:15px; background:linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+  color:white; border:none; border-radius:12px; font-family:'DM Sans',sans-serif;
+  font-size:14px; font-weight:500; cursor:pointer; transition:.2s; letter-spacing:0.02em;
+}
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(244,63,142,0.3); }
+.btn-primary:active { transform:translateY(0); }
+.login-error { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; display:none; }
+
+/* LAYOUT */
+#app { display:none; min-height:100vh; }
+.sidebar {
+  position:fixed; left:0; top:0; bottom:0; width:260px;
+  background:var(--white); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:100;
+}
+.sidebar-header { padding:28px 24px 20px; border-bottom:1px solid var(--border); }
+.sidebar-logo { display:flex; align-items:center; gap:10px; }
+.sidebar-logo .logo-icon { width:36px; height:36px; background:linear-gradient(135deg,var(--rose),var(--rose-dark)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.sidebar-logo h2 { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:600; color:var(--text); }
+.sidebar-logo span { display:block; font-size:11px; color:var(--text-soft); }
+.sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; }
+.nav-section { margin-bottom:24px; }
+.nav-section-label { font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-soft); padding:0 12px; margin-bottom:8px; }
+.nav-item {
+  display:flex; align-items:center; gap:12px; padding:11px 12px;
+  border-radius:10px; cursor:pointer; transition:.15s; color:var(--text-mid);
+  font-size:13.5px; font-weight:400; margin-bottom:2px;
+}
+.nav-item:hover { background:var(--blush); color:var(--rose); }
+.nav-item.active { background:var(--rose-light); color:var(--rose); font-weight:500; }
+.nav-item .icon { width:18px; text-align:center; font-size:16px; }
+.sidebar-footer { padding:16px 12px; border-top:1px solid var(--border); }
+.user-card { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; }
+.user-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--rose-mid),var(--rose)); display:flex; align-items:center; justify-content:center; font-size:14px; color:white; font-weight:500; }
+.user-info .name { font-size:13px; font-weight:500; color:var(--text); }
+.user-info .email { font-size:11px; color:var(--text-soft); }
+.logout-btn { margin-top:8px; width:100%; padding:9px; background:var(--blush); border:1px solid var(--border); border-radius:8px; color:var(--text-mid); font-size:12px; cursor:pointer; transition:.15s; font-family:'DM Sans',sans-serif; }
+.logout-btn:hover { background:var(--rose-light); color:var(--rose); }
+
+/* MAIN CONTENT */
+.main { margin-left:260px; padding:32px; min-height:100vh; }
+.page { display:none; }
+.page.active { display:block; }
+.page-header { margin-bottom:28px; }
+.page-header h1 { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:600; color:var(--text); }
+.page-header p { font-size:14px; color:var(--text-soft); margin-top:4px; }
+
+/* STATS CARDS */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.stat-card { background:var(--white); border-radius:var(--radius); padding:24px; border:1px solid var(--border); }
+.stat-card .label { font-size:12px; color:var(--text-soft); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+.stat-card .value { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:600; color:var(--text); }
+.stat-card .sub { font-size:12px; color:var(--text-soft); margin-top:4px; }
+.stat-card .icon-wrap { width:40px; height:40px; border-radius:10px; background:var(--rose-light); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:12px; }
+
+/* CARDS */
+.card { background:var(--white); border-radius:var(--radius); border:1px solid var(--border); padding:24px; margin-bottom:20px; }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.card-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:600; }
+
+/* BUTTONS */
+.btn { padding:10px 18px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:.15s; border:none; }
+.btn-sm { padding:7px 14px; font-size:12px; border-radius:8px; }
+.btn-rose { background:var(--rose); color:white; }
+.btn-rose:hover { background:var(--rose-dark); }
+.btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text-mid); }
+.btn-outline:hover { border-color:var(--rose); color:var(--rose); }
+.btn-danger { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.btn-danger:hover { background:#dc2626; color:white; }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-soft); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); }
+td { padding:12px 14px; font-size:13.5px; border-bottom:1px solid #fdf2f8; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--blush); }
+
+/* BADGE */
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:500; }
+.badge-rose { background:var(--rose-light); color:var(--rose-dark); }
+.badge-green { background:#f0fdf4; color:#16a34a; }
+.badge-gray { background:#f9fafb; color:#6b7280; }
+.badge-orange { background:#fff7ed; color:#ea580c; }
+
+/* FORM ELEMENTS */
+.input, .select, .textarea {
+  width:100%; padding:11px 14px; border:1.5px solid var(--border);
+  border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13.5px;
+  color:var(--text); background:var(--blush); outline:none; transition:.2s;
+}
+.input:focus, .select:focus, .textarea:focus { border-color:var(--rose); background:var(--white); }
+.textarea { resize:vertical; min-height:100px; }
+.form-row { display:grid; gap:16px; margin-bottom:16px; }
+.form-row.cols-2 { grid-template-columns:1fr 1fr; }
+.form-row.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+.form-label { display:block; font-size:12px; font-weight:500; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
+.form-group-inner { display:flex; flex-direction:column; }
+
+/* PROGRESS */
+.progress-wrap { background:var(--rose-light); border-radius:100px; height:8px; overflow:hidden; margin:8px 0; }
+.progress-bar { height:100%; background:linear-gradient(90deg,var(--rose),var(--rose-dark)); border-radius:100px; transition:width .3s ease; }
+.progress-info { display:flex; justify-content:space-between; font-size:12px; color:var(--text-soft); }
+
+/* SEND LOG */
+.log-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.log-item:last-child { border-bottom:none; }
+.log-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.log-dot.success { background:#22c55e; }
+.log-dot.failed { background:#ef4444; }
+.log-dot.waiting { background:#f59e0b; }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(28,16,18,0.4); z-index:1000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--white); border-radius:20px; padding:32px; width:500px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 24px 80px rgba(244,63,142,0.15); }
+.modal h2 { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; margin-bottom:24px; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:24px; }
+
+/* CHECKBOX GROUP */
+.checkbox-list { max-height:200px; overflow-y:auto; border:1.5px solid var(--border); border-radius:10px; }
+.checkbox-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:.1s; }
+.checkbox-item:last-child { border-bottom:none; }
+.checkbox-item:hover { background:var(--blush); }
+.checkbox-item input[type=checkbox] { accent-color:var(--rose); width:15px; height:15px; }
+
+/* TABS */
+.tabs { display:flex; gap:4px; background:var(--blush); border-radius:10px; padding:4px; margin-bottom:24px; }
+.tab { padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer; transition:.15s; color:var(--text-soft); }
+.tab.active { background:var(--white); color:var(--rose); font-weight:500; box-shadow:0 2px 8px rgba(244,63,142,0.1); }
+
+/* SEARCH BAR */
+.search-bar { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+.search-input-wrap { position:relative; flex:1; }
+.search-input-wrap .icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; }
+.search-input-wrap input { width:100%; padding:10px 14px 10px 36px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; background:var(--white); outline:none; font-family:'DM Sans',sans-serif; }
+.search-input-wrap input:focus { border-color:var(--rose); }
+
+/* PAGINATION */
+.pagination { display:flex; align-items:center; gap:8px; margin-top:16px; justify-content:center; }
+.page-btn { width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border); background:var(--white); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:.15s; color:var(--text-mid); font-family:'DM Sans',sans-serif; }
+.page-btn:hover { border-color:var(--rose); color:var(--rose); }
+.page-btn.active { background:var(--rose); color:white; border-color:var(--rose); }
+
+/* TOAST */
+.toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+.toast { padding:12px 18px; border-radius:12px; font-size:13px; font-weight:500; animation:slideIn .3s ease; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+.toast.success { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.toast.error { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.toast.info { background:var(--rose-light); color:var(--rose-dark); border:1px solid var(--rose-mid); }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:none;opacity:1} }
+
+/* RESPONSIVE */
+@media(max-width:900px) { .stats-grid{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="petal">🌸</div>
+      <h1>Peony Collective</h1>
+      <p>WhatsApp Yönetim Paneli</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="info@peonycollective.com" value="info@peonycollective.com">
+    </div>
+    <div class="form-group">
+      <label>Şifre</label>
+      <input type="password" id="login-password" placeholder="••••••" value="123456">
+    </div>
+    <button class="btn-primary" onclick="login()">Giriş Yap</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon">🌸</div>
+        <div>
+          <h2>Peony</h2>
+          <span>Collective Panel</span>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Genel</div>
+        <div class="nav-item active" onclick="showPage('dashboard')">
+          <span class="icon">📊</span> Gösterge Paneli
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">İletişim</div>
+        <div class="nav-item" onclick="showPage('contacts')">
+          <span class="icon">👥</span> Kişiler
+        </div>
+        <div class="nav-item" onclick="showPage('groups')">
+          <span class="icon">🗂️</span> Gruplar & Listeler
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Mesajlar</div>
+        <div class="nav-item" onclick="showPage('send')">
+          <span class="icon">📤</span> Toplu Gönderim
+        </div>
+        <div class="nav-item" onclick="showPage('templates')">
+          <span class="icon">📋</span> Şablonlar
+        </div>
+        <div class="nav-item" onclick="showPage('scheduled')">
+          <span class="icon">⏰</span> Zamanlanmış
+        </div>
+        <div class="nav-item" onclick="showPage('logs')">
+          <span class="icon">📝</span> Gönderim Geçmişi
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Sistem</div>
+        <div class="nav-item" onclick="showPage('users')">
+          <span class="icon">🔐</span> Kullanıcılar
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-info">
+          <div class="name" id="user-name">Admin</div>
+          <div class="email" id="user-email">info@peonycollective.com</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">🚪 Çıkış Yap</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1>🌸 Hoş Geldiniz</h1>
+        <p>Peony Collective WhatsApp Yönetim Paneli</p>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="icon-wrap">👥</div>
+          <div class="label">Toplam Kişi</div>
+          <div class="value" id="stat-contacts">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-wrap">🗂️</div>
+          <div class="label">Gruplar</div>
+          <div class="value" id="stat-groups">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-wrap">📤</div>
+          <div class="label">Toplam Gönderim</div>
+          <div class="value" id="stat-sent">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-wrap">⏰</div>
+          <div class="label">Bekleyen</div>
+          <div class="value" id="stat-pending">—</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Son Gönderimler</div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('logs')">Tümünü Gör</button>
+        </div>
+        <div id="dashboard-logs">
+          <p style="color:var(--text-soft);font-size:13px;">Yükleniyor...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div class="page" id="page-contacts">
+      <div class="page-header">
+        <h1>Kişiler</h1>
+        <p>Tüm WhatsApp kişilerinizi yönetin</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="search-input-wrap" style="width:280px">
+              <span class="icon">🔍</span>
+              <input type="text" placeholder="İsim veya telefon ara..." id="contact-search" oninput="searchContacts()">
+            </div>
+            <select class="select" style="width:180px" id="contact-group-filter" onchange="searchContacts()">
+              <option value="">Tüm Gruplar</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="openImportModal()">📥 CSV İçe Aktar</button>
+            <button class="btn btn-rose btn-sm" onclick="openContactModal()">+ Kişi Ekle</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Ad Soyad</th><th>Telefon</th><th>Gruplar</th><th>Tarih</th><th>İşlem</th></tr>
+            </thead>
+            <tbody id="contacts-table"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="contacts-pagination"></div>
+      </div>
+    </div>
+
+    <!-- GROUPS -->
+    <div class="page" id="page-groups">
+      <div class="page-header">
+        <h1>Gruplar & Listeler</h1>
+        <p>Kişilerinizi gruplar halinde organize edin</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Tüm Gruplar</div>
+          <button class="btn btn-rose btn-sm" onclick="openGroupModal()">+ Grup Oluştur</button>
+        </div>
+        <div id="groups-list"></div>
+      </div>
+    </div>
+
+    <!-- SEND -->
+    <div class="page" id="page-send">
+      <div class="page-header">
+        <h1>Toplu Gönderim</h1>
+        <p>15-25 saniye aralıklarla güvenli mesaj gönderimi</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:20px">Mesaj Ayarları</div>
+            <div class="tabs">
+              <div class="tab active" onclick="switchSendTab('text',this)">✏️ Metin Mesajı</div>
+              <div class="tab" onclick="switchSendTab('template',this)">📋 Şablon</div>
+            </div>
+            <div id="send-text-panel">
+              <div class="form-group-inner" style="margin-bottom:16px">
+                <label class="form-label">Mesaj</label>
+                <textarea class="textarea" id="send-message" placeholder="WhatsApp mesajınızı yazın..." style="min-height:140px"></textarea>
+              </div>
+            </div>
+            <div id="send-template-panel" style="display:none">
+              <div class="form-group-inner" style="margin-bottom:16px">
+                <label class="form-label">Şablon Adı</label>
+                <select class="select" id="send-template-select">
+                  <option value="">Şablon seçin...</option>
+                </select>
+              </div>
+              <div class="form-group-inner" style="margin-bottom:16px">
+                <label class="form-label">Dil</label>
+                <select class="select" id="send-template-lang">
+                  <option value="tr">Türkçe (tr)</option>
+                  <option value="en">İngilizce (en)</option>
+                  <option value="en_US">İngilizce US (en_US)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group-inner" style="margin-bottom:16px">
+              <label class="form-label">Alıcı Seç</label>
+              <div class="tabs" style="margin-bottom:12px">
+                <div class="tab active" onclick="switchRecipientTab('groups',this)">🗂️ Gruplar</div>
+                <div class="tab" onclick="switchRecipientTab('contacts',this)">👥 Kişiler</div>
+              </div>
+              <div id="recipient-groups-panel">
+                <div class="checkbox-list" id="group-checkboxes"></div>
+              </div>
+              <div id="recipient-contacts-panel" style="display:none">
+                <input type="text" class="input" placeholder="Kişi ara..." id="recipient-search" oninput="filterRecipients()" style="margin-bottom:8px">
+                <div class="checkbox-list" id="contact-checkboxes" style="max-height:160px"></div>
+              </div>
+            </div>
+            <button class="btn btn-rose" style="width:100%" onclick="startBulkSend()">🚀 Gönderimi Başlat</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" id="send-progress-card" style="display:none">
+            <div class="card-title" style="margin-bottom:16px">📊 Gönderim Durumu</div>
+            <div class="progress-info">
+              <span id="progress-text">Hazırlanıyor...</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+            <div style="display:flex;gap:16px;margin:12px 0">
+              <div style="font-size:13px"><span style="color:#22c55e">✓</span> <strong id="prog-sent">0</strong> gönderildi</div>
+              <div style="font-size:13px"><span style="color:#ef4444">✗</span> <strong id="prog-failed">0</strong> başarısız</div>
+            </div>
+            <div style="font-size:12px;color:var(--text-soft);background:var(--blush);padding:8px 12px;border-radius:8px;margin-bottom:12px" id="waiting-msg"></div>
+            <div id="send-log" style="max-height:300px;overflow-y:auto"></div>
+          </div>
+          <div class="card" id="send-info-card">
+            <div class="card-title" style="margin-bottom:16px">ℹ️ Nasıl Çalışır?</div>
+            <div style="font-size:13.5px;color:var(--text-mid);line-height:1.8">
+              <p>🔒 <strong>Güvenli gönderim:</strong> Her mesaj arasında 15-25 saniye beklenir</p>
+              <p style="margin-top:10px">📊 <strong>İlerleme takibi:</strong> Canlı olarak gönderim durumunu izleyin</p>
+              <p style="margin-top:10px">📋 <strong>Şablon desteği:</strong> Meta onaylı şablonları kullanın</p>
+              <p style="margin-top:10px">🗂️ <strong>Grup seçimi:</strong> Birden fazla grup seçebilirsiniz</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEMPLATES -->
+    <div class="page" id="page-templates">
+      <div class="page-header">
+        <h1>Şablonlar</h1>
+        <p>Meta onaylı WhatsApp şablonlarınız</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Aktif Şablonlar</div>
+          <button class="btn btn-outline btn-sm" onclick="loadTemplates()">🔄 Yenile</button>
+        </div>
+        <div id="templates-list">
+          <p style="color:var(--text-soft);font-size:13px;">Yükleniyor...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULED -->
+    <div class="page" id="page-scheduled">
+      <div class="page-header">
+        <h1>Zamanlanmış Gönderimler</h1>
+        <p>İleride gönderilecek mesajlarınızı planlayın</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Planlı Gönderimler</div>
+          <button class="btn btn-rose btn-sm" onclick="openScheduleModal()">+ Zamanla</button>
+        </div>
+        <div id="scheduled-list"></div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="page" id="page-logs">
+      <div class="page-header">
+        <h1>Gönderim Geçmişi</h1>
+        <p>Tüm mesaj gönderim kayıtları</p>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tip</th><th>Mesaj/Şablon</th><th>Toplam</th><th>Gönderildi</th><th>Başarısız</th><th>Durum</th><th>Tarih</th></tr>
+            </thead>
+            <tbody id="logs-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <h1>Kullanıcı Yönetimi</h1>
+        <p>Panel erişim yetkilerini yönetin</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Kullanıcılar</div>
+          <button class="btn btn-rose btn-sm" onclick="openUserModal()">+ Kullanıcı Ekle</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Ad</th><th>Email</th><th>Rol</th><th>İşlem</th></tr>
+            </thead>
+            <tbody id="users-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+<!-- Contact Modal -->
+<div class="modal-overlay" id="contact-modal">
+  <div class="modal">
+    <h2>Kişi Ekle</h2>
+    <div class="form-row cols-2">
+      <div class="form-group-inner">
+        <label class="form-label">Ad Soyad *</label>
+        <input class="input" id="c-name" placeholder="Ayşe Yılmaz">
+      </div>
+      <div class="form-group-inner">
+        <label class="form-label">Telefon * (905XXXXXXXXX)</label>
+        <input class="input" id="c-phone" placeholder="905551234567">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-inner">
+        <label class="form-label">Email</label>
+        <input class="input" id="c-email" placeholder="ornek@email.com" type="email">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('contact-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="saveContact()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group Modal -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal">
+    <h2>Grup Oluştur</h2>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Grup Adı *</label>
+      <input class="input" id="g-name" placeholder="VIP Müşteriler">
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Açıklama</label>
+      <input class="input" id="g-desc" placeholder="Grup açıklaması...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('group-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="saveGroup()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h2>CSV İçe Aktar</h2>
+    <p style="font-size:13px;color:var(--text-soft);margin-bottom:20px">CSV dosyanızda <strong>name</strong> ve <strong>phone</strong> sütunları bulunmalıdır. Telefon numaraları uluslararası formatta olmalıdır (ör: 905551234567)</p>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">CSV Dosyası</label>
+      <input type="file" accept=".csv" id="csv-file" class="input">
+    </div>
+    <div id="import-result" style="display:none;padding:12px;border-radius:10px;background:var(--rose-light);font-size:13px;margin-bottom:16px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('import-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="importCSV()">İçe Aktar</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <h2>Kullanıcı Ekle</h2>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Ad *</label>
+      <input class="input" id="u-name" placeholder="Kullanıcı adı">
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Email *</label>
+      <input class="input" id="u-email" placeholder="ornek@email.com" type="email">
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Şifre *</label>
+      <input class="input" id="u-password" placeholder="••••••" type="password">
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Rol</label>
+      <select class="select" id="u-role">
+        <option value="admin">Admin</option>
+        <option value="user">Kullanıcı</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('user-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="saveUser()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal-overlay" id="schedule-modal">
+  <div class="modal">
+    <h2>Gönderim Zamanla</h2>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Gönderim Adı *</label>
+      <input class="input" id="sch-name" placeholder="Haftalık kampanya">
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Mesaj *</label>
+      <textarea class="textarea" id="sch-message" placeholder="Mesajınızı yazın..."></textarea>
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Grup Seç</label>
+      <div class="checkbox-list" id="schedule-group-checkboxes" style="max-height:150px"></div>
+    </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Gönderim Tarihi & Saati *</label>
+      <input class="input" id="sch-date" type="datetime-local">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('schedule-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="saveScheduled()">Zamanla</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('peony_token');
+let currentUser = null;
+let allContacts = [];
+let allGroups = [];
+let currentPage = 1;
+let sendMode = 'text';
+let recipientMode = 'groups';
+
+// ========== AUTH ==========
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (!res.ok) { showLoginError(data.error); return; }
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('peony_token', token);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-name').textContent = currentUser.name;
+    document.getElementById('user-email').textContent = currentUser.email;
+    document.getElementById('user-avatar').textContent = currentUser.name[0].toUpperCase();
+    initApp();
+  } catch(e) { showLoginError('Bağlantı hatası'); }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function logout() {
+  localStorage.removeItem('peony_token');
+  location.reload();
+}
+
+document.getElementById('login-email').addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+document.getElementById('login-password').addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+
+// Check existing token
+if (token) {
+  fetch(`${API}/api/auth/me`, {headers:{Authorization:`Bearer ${token}`}})
+    .then(r => r.json())
+    .then(user => {
+      if (user._id) {
+        currentUser = user;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('user-name').textContent = user.name;
+        document.getElementById('user-email').textContent = user.email;
+        document.getElementById('user-avatar').textContent = user.name[0].toUpperCase();
+        initApp();
+      }
+    }).catch(() => {});
+}
+
+// ========== NAVIGATION ==========
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  event?.currentTarget?.classList.add('active');
+  // Load page data
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'contacts') loadContacts();
+  else if (page === 'groups') loadGroups();
+  else if (page === 'send') loadSendPage();
+  else if (page === 'templates') loadTemplates();
+  else if (page === 'scheduled') loadScheduled();
+  else if (page === 'logs') loadLogs();
+  else if (page === 'users') loadUsers();
+}
+
+function initApp() {
+  loadDashboard();
+  loadGroupsData();
+}
+
+// ========== API HELPER ==========
+async function api(method, path, body) {
+  const opts = { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${API}${path}`, opts);
+  return res.json();
+}
+
+// ========== DASHBOARD ==========
+async function loadDashboard() {
+  try {
+    const [contacts, groups, logs, scheduled] = await Promise.all([
+      api('GET', '/api/contacts?limit=1'),
+      api('GET', '/api/groups'),
+      api('GET', '/api/messages/logs'),
+      api('GET', '/api/scheduled')
+    ]);
+    document.getElementById('stat-contacts').textContent = contacts.total || 0;
+    document.getElementById('stat-groups').textContent = groups.length || 0;
+    document.getElementById('stat-sent').textContent = logs.reduce((a,l) => a + (l.sentCount||0), 0);
+    document.getElementById('stat-pending').textContent = scheduled.filter(s => s.status === 'pending').length;
+    
+    const logEl = document.getElementById('dashboard-logs');
+    if (!logs.length) { logEl.innerHTML = '<p style="color:var(--text-soft);font-size:13px">Henüz gönderim yok</p>'; return; }
+    logEl.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Tip</th><th>Toplam</th><th>Gönderildi</th><th>Durum</th><th>Tarih</th></tr></thead><tbody>${
+      logs.slice(0,5).map(l => `<tr>
+        <td><span class="badge badge-rose">${l.type}</span></td>
+        <td>${l.totalContacts}</td>
+        <td>${l.sentCount}</td>
+        <td>${statusBadge(l.status)}</td>
+        <td>${formatDate(l.createdAt)}</td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+  } catch(e) {}
+}
+
+// ========== CONTACTS ==========
+async function loadContacts(page = 1) {
+  currentPage = page;
+  const search = document.getElementById('contact-search')?.value || '';
+  const group = document.getElementById('contact-group-filter')?.value || '';
+  try {
+    const data = await api('GET', `/api/contacts?page=${page}&limit=20&search=${encodeURIComponent(search)}&group=${group}`);
+    const tbody = document.getElementById('contacts-table');
+    tbody.innerHTML = data.contacts.map(c => `<tr>
+      <td><strong>${c.name}</strong></td>
+      <td style="font-family:monospace;font-size:13px">${c.phone}</td>
+      <td>${c.groups?.map(g => `<span class="badge badge-rose" style="margin-right:4px">${g.name}</span>`).join('') || '—'}</td>
+      <td style="color:var(--text-soft)">${formatDate(c.createdAt)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteContact('${c._id}')">Sil</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-soft)">Kişi bulunamadı</td></tr>';
+    
+    renderPagination('contacts-pagination', data.page, data.pages, loadContacts);
+    
+    // Update group filter
+    const sel = document.getElementById('contact-group-filter');
+    if (sel.options.length === 1) {
+      allGroups.forEach(g => { const o = new Option(g.name, g._id); sel.add(o); });
+    }
+  } catch(e) {}
+}
+
+function searchContacts() { loadContacts(1); }
+
+async function deleteContact(id) {
+  if (!confirm('Bu kişiyi silmek istediğinizden emin misiniz?')) return;
+  await api('DELETE', `/api/contacts/${id}`);
+  toast('Kişi silindi', 'success');
+  loadContacts(currentPage);
+}
+
+function openContactModal() { openModal('contact-modal'); }
+
+async function saveContact() {
+  const name = document.getElementById('c-name').value;
+  const phone = document.getElementById('c-phone').value;
+  const email = document.getElementById('c-email').value;
+  if (!name || !phone) { toast('Ad ve telefon gerekli', 'error'); return; }
+  const data = await api('POST', '/api/contacts', { name, phone, email });
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('Kişi eklendi', 'success');
+  closeModal('contact-modal');
+  loadContacts(1);
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-phone').value = '';
+  document.getElementById('c-email').value = '';
+}
+
+// ========== CSV IMPORT ==========
+function openImportModal() { openModal('import-modal'); }
+
+async function importCSV() {
+  const file = document.getElementById('csv-file').files[0];
+  if (!file) { toast('Lütfen CSV dosyası seçin', 'error'); return; }
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API}/api/contacts/import`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'error'); return; }
+  const resultEl = document.getElementById('import-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `✅ <strong>${data.imported}</strong> kişi içe aktarıldı, <strong>${data.skipped}</strong> atlandı (toplam ${data.total})`;
+  toast(`${data.imported} kişi içe aktarıldı`, 'success');
+  loadContacts(1);
+}
+
+// ========== GROUPS ==========
+async function loadGroupsData() {
+  allGroups = await api('GET', '/api/groups');
+}
+
+async function loadGroups() {
+  allGroups = await api('GET', '/api/groups');
+  const el = document.getElementById('groups-list');
+  if (!allGroups.length) { el.innerHTML = '<p style="color:var(--text-soft);font-size:13px;padding:20px">Henüz grup yok</p>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Grup Adı</th><th>Açıklama</th><th>Kişi Sayısı</th><th>İşlem</th></tr></thead><tbody>${
+    allGroups.map(g => `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${g.color};margin-right:8px"></span><strong>${g.name}</strong></td>
+      <td style="color:var(--text-soft)">${g.description || '—'}</td>
+      <td><span class="badge badge-rose">${g.contacts?.length || 0} kişi</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteGroup('${g._id}')">Sil</button></td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+}
+
+function openGroupModal() { openModal('group-modal'); }
+
+async function saveGroup() {
+  const name = document.getElementById('g-name').value;
+  const description = document.getElementById('g-desc').value;
+  if (!name) { toast('Grup adı gerekli', 'error'); return; }
+  const data = await api('POST', '/api/groups', { name, description });
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('Grup oluşturuldu', 'success');
+  closeModal('group-modal');
+  loadGroupsData();
+  loadGroups();
+  document.getElementById('g-name').value = '';
+  document.getElementById('g-desc').value = '';
+}
+
+async function deleteGroup(id) {
+  if (!confirm('Bu grubu silmek istediğinizden emin misiniz?')) return;
+  await api('DELETE', `/api/groups/${id}`);
+  toast('Grup silindi', 'success');
+  loadGroupsData();
+  loadGroups();
+}
+
+// ========== SEND PAGE ==========
+async function loadSendPage() {
+  await loadGroupsData();
+  renderGroupCheckboxes();
+  loadTemplateOptions();
+}
+
+function renderGroupCheckboxes() {
+  document.getElementById('group-checkboxes').innerHTML = allGroups.map(g => `
+    <label class="checkbox-item">
+      <input type="checkbox" value="${g._id}" name="send-group">
+      <span>${g.name} <span style="color:var(--text-soft);font-size:12px">(${g.contacts?.length || 0} kişi)</span></span>
+    </label>
+  `).join('') || '<p style="padding:12px;font-size:13px;color:var(--text-soft)">Henüz grup yok</p>';
+  
+  document.getElementById('schedule-group-checkboxes').innerHTML = document.getElementById('group-checkboxes').innerHTML;
+}
+
+async function loadContactCheckboxes(search = '') {
+  const data = await api('GET', `/api/contacts?limit=100&search=${encodeURIComponent(search)}`);
+  allContacts = data.contacts || [];
+  document.getElementById('contact-checkboxes').innerHTML = allContacts.map(c => `
+    <label class="checkbox-item">
+      <input type="checkbox" value="${c._id}" name="send-contact">
+      <span>${c.name} <span style="color:var(--text-soft);font-size:12px">${c.phone}</span></span>
+    </label>
+  `).join('');
+}
+
+function filterRecipients() {
+  loadContactCheckboxes(document.getElementById('recipient-search').value);
+}
+
+async function loadTemplateOptions() {
+  try {
+    const data = await api('GET', '/api/templates');
+    const sel = document.getElementById('send-template-select');
+    if (data.data) {
+      sel.innerHTML = '<option value="">Şablon seçin...</option>' + 
+        data.data.filter(t => t.status === 'APPROVED').map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+    }
+  } catch(e) {}
+}
+
+function switchSendTab(mode, el) {
+  sendMode = mode;
+  document.querySelectorAll('#page-send .tabs:first-of-type .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('send-text-panel').style.display = mode === 'text' ? 'block' : 'none';
+  document.getElementById('send-template-panel').style.display = mode === 'template' ? 'block' : 'none';
+}
+
+function switchRecipientTab(mode, el) {
+  recipientMode = mode;
+  document.querySelectorAll('#page-send .form-group-inner .tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('recipient-groups-panel').style.display = mode === 'groups' ? 'block' : 'none';
+  document.getElementById('recipient-contacts-panel').style.display = mode === 'contacts' ? 'block' : 'none';
+  if (mode === 'contacts') loadContactCheckboxes();
+}
+
+async function startBulkSend() {
+  const groupIds = [...document.querySelectorAll('[name=send-group]:checked')].map(el => el.value);
+  const contactIds = [...document.querySelectorAll('[name=send-contact]:checked')].map(el => el.value);
+  const message = document.getElementById('send-message').value;
+  const templateName = document.getElementById('send-template-select').value;
+  const templateLanguage = document.getElementById('send-template-lang').value;
+
+  if (!groupIds.length && !contactIds.length) { toast('Lütfen en az bir grup veya kişi seçin', 'error'); return; }
+  if (sendMode === 'text' && !message) { toast('Mesaj yazın', 'error'); return; }
+  if (sendMode === 'template' && !templateName) { toast('Şablon seçin', 'error'); return; }
+
+  document.getElementById('send-progress-card').style.display = 'block';
+  document.getElementById('send-info-card').style.display = 'none';
+  document.getElementById('send-log').innerHTML = '';
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('prog-sent').textContent = '0';
+  document.getElementById('prog-failed').textContent = '0';
+
+  const body = { message, groupIds, contactIds, messageType: sendMode, templateName, templateLanguage };
+  const res = await fetch(`${API}/api/messages/bulk`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value);
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      try {
+        const ev = JSON.parse(line.slice(5));
+        handleSendEvent(ev);
+      } catch(e) {}
+    }
+  }
+}
+
+function handleSendEvent(ev) {
+  const logEl = document.getElementById('send-log');
+  if (ev.type === 'start') {
+    document.getElementById('progress-text').textContent = `0 / ${ev.total} gönderildi`;
+  } else if (ev.type === 'progress') {
+    const pct = Math.round((ev.current / ev.total) * 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct + '%';
+    document.getElementById('progress-text').textContent = `${ev.current} / ${ev.total} işlendi`;
+    document.getElementById('prog-sent').textContent = ev.sent;
+    document.getElementById('prog-failed').textContent = ev.failed;
+    document.getElementById('waiting-msg').textContent = '';
+    const dot = ev.status === 'success' ? 'success' : 'failed';
+    logEl.innerHTML += `<div class="log-item"><div class="log-dot ${dot}"></div><span>${ev.contact}</span><span style="margin-left:auto;color:${dot==='success'?'#22c55e':'#ef4444'};font-size:12px">${dot==='success'?'✓':'✗'}</span></div>`;
+    logEl.scrollTop = logEl.scrollHeight;
+  } else if (ev.type === 'waiting') {
+    document.getElementById('waiting-msg').textContent = `⏳ Sonraki mesaj için ${ev.delay} saniye bekleniyor...`;
+  } else if (ev.type === 'complete') {
+    document.getElementById('progress-text').textContent = `Tamamlandı! ${ev.sent} gönderildi, ${ev.failed} başarısız`;
+    document.getElementById('waiting-msg').textContent = '';
+    toast(`Gönderim tamamlandı: ${ev.sent} başarılı`, 'success');
+  } else if (ev.type === 'error') {
+    toast(ev.message, 'error');
+  }
+}
+
+// ========== TEMPLATES ==========
+async function loadTemplates() {
+  const el = document.getElementById('templates-list');
+  el.innerHTML = '<p style="color:var(--text-soft);font-size:13px">Yükleniyor...</p>';
+  try {
+    const data = await api('GET', '/api/templates');
+    if (!data.data?.length) { el.innerHTML = '<p style="color:var(--text-soft);font-size:13px">Şablon bulunamadı veya token eksik</p>'; return; }
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Şablon Adı</th><th>Kategori</th><th>Dil</th><th>Durum</th></tr></thead><tbody>${
+      data.data.map(t => `<tr>
+        <td><strong>${t.name}</strong></td>
+        <td>${t.category}</td>
+        <td>${t.language}</td>
+        <td>${t.status === 'APPROVED' ? '<span class="badge badge-green">✓ Onaylı</span>' : '<span class="badge badge-orange">Beklemede</span>'}</td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+  } catch(e) { el.innerHTML = '<p style="color:#dc2626;font-size:13px">Şablonlar yüklenemedi</p>'; }
+}
+
+// ========== SCHEDULED ==========
+async function loadScheduled() {
+  const data = await api('GET', '/api/scheduled');
+  const el = document.getElementById('scheduled-list');
+  if (!data.length) { el.innerHTML = '<p style="color:var(--text-soft);font-size:13px;padding:20px">Zamanlanmış gönderim yok</p>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Ad</th><th>Mesaj</th><th>Kişi Sayısı</th><th>Tarih</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${
+    data.map(s => `<tr>
+      <td><strong>${s.name}</strong></td>
+      <td style="color:var(--text-soft);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.message || s.templateName || '—'}</td>
+      <td>${s.contacts?.length || 0}</td>
+      <td>${formatDate(s.scheduledAt)}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td>${s.status==='pending' ? `<button class="btn btn-danger btn-sm" onclick="deleteScheduled('${s._id}')">İptal</button>` : '—'}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+}
+
+function openScheduleModal() {
+  renderGroupCheckboxes();
+  openModal('schedule-modal');
+}
+
+async function saveScheduled() {
+  const name = document.getElementById('sch-name').value;
+  const message = document.getElementById('sch-message').value;
+  const scheduledAt = document.getElementById('sch-date').value;
+  const groupIds = [...document.querySelectorAll('#schedule-group-checkboxes input:checked')].map(el => el.value);
+  if (!name || !message || !scheduledAt) { toast('Tüm alanları doldurun', 'error'); return; }
+  const data = await api('POST', '/api/scheduled', { name, message, messageType:'text', groupIds, scheduledAt });
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('Gönderim zamanlandı', 'success');
+  closeModal('schedule-modal');
+  loadScheduled();
+}
+
+async function deleteScheduled(id) {
+  await api('DELETE', `/api/scheduled/${id}`);
+  toast('Zamanlanmış gönderim iptal edildi', 'success');
+  loadScheduled();
+}
+
+// ========== LOGS ==========
+async function loadLogs() {
+  const data = await api('GET', '/api/messages/logs');
+  const tbody = document.getElementById('logs-table');
+  tbody.innerHTML = data.map(l => `<tr>
+    <td><span class="badge badge-rose">${l.type}</span></td>
+    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-soft)">${l.message || l.templateName || '—'}</td>
+    <td>${l.totalContacts}</td>
+    <td style="color:#22c55e"><strong>${l.sentCount}</strong></td>
+    <td style="color:#ef4444">${l.failedCount}</td>
+    <td>${statusBadge(l.status)}</td>
+    <td style="color:var(--text-soft)">${formatDate(l.createdAt)}</td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-soft)">Henüz gönderim yok</td></tr>';
+}
+
+// ========== USERS ==========
+async function loadUsers() {
+  const data = await api('GET', '/api/auth/users');
+  const tbody = document.getElementById('users-table');
+  tbody.innerHTML = data.map(u => `<tr>
+    <td><strong>${u.name}</strong></td>
+    <td>${u.email}</td>
+    <td><span class="badge ${u.role === 'admin' ? 'badge-rose' : 'badge-gray'}">${u.role}</span></td>
+    <td>${u.email !== 'info@peonycollective.com' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u._id}')">Sil</button>` : '—'}</td>
+  </tr>`).join('');
+}
+
+function openUserModal() { openModal('user-modal'); }
+
+async function saveUser() {
+  const name = document.getElementById('u-name').value;
+  const email = document.getElementById('u-email').value;
+  const password = document.getElementById('u-password').value;
+  const role = document.getElementById('u-role').value;
+  if (!name || !email || !password) { toast('Tüm alanları doldurun', 'error'); return; }
+  const data = await api('POST', '/api/auth/users', { name, email, password, role });
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('Kullanıcı eklendi', 'success');
+  closeModal('user-modal');
+  loadUsers();
+}
+
+async function deleteUser(id) {
+  if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+  await api('DELETE', `/api/auth/users/${id}`);
+  toast('Kullanıcı silindi', 'success');
+  loadUsers();
+}
+
+// ========== HELPERS ==========
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+function formatDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function statusBadge(status) {
+  const map = { pending:'badge-orange', processing:'badge-rose', completed:'badge-green', failed:'badge-gray' };
+  const label = { pending:'Bekliyor', processing:'İşleniyor', completed:'Tamamlandı', failed:'Başarısız' };
+  return `<span class="badge ${map[status]||'badge-gray'}">${label[status]||status}</span>`;
+}
+
+function renderPagination(containerId, page, pages, cb) {
+  const el = document.getElementById(containerId);
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  if (page > 1) html += `<button class="page-btn" onclick="${cb.name}(${page-1})">‹</button>`;
+  for (let i = Math.max(1, page-2); i <= Math.min(pages, page+2); i++) {
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="${cb.name}(${i})">${i}</button>`;
+  }
+  if (page < pages) html += `<button class="page-btn" onclick="${cb.name}(${page+1})">›</button>`;
+  el.innerHTML = html;
+}
+
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>
