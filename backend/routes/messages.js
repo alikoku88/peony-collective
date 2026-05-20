@@ -111,7 +111,7 @@ router.post('/bulk', authMiddleware, async (req, res) => {
                 parameters: [
                   {
                     type: headerType,
-                    [headerType]: { id: templateHeaderId }
+                    [headerType]: { link: templateHeaderId }
                   }
                 ]
               }
