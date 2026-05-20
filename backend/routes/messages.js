@@ -18,9 +18,8 @@ router.get('/logs', authMiddleware, async (req, res) => {
 
 // Send bulk message with SSE progress
 router.post('/bulk', authMiddleware, async (req, res) => {
-  const { message, contactIds, groupIds, messageType, templateName, templateLanguage, templateHeaderUrl, templateHeaderType } = req.body;
+  const { message, contactIds, groupIds, messageType, templateName, templateLanguage, templateHeaderId, templateHeaderType } = req.body;
 
-  // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -29,7 +28,6 @@ router.post('/bulk', authMiddleware, async (req, res) => {
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    // Collect contacts
     let contacts = [];
     if (contactIds && contactIds.length) {
       const found = await Contact.find({ _id: { $in: contactIds } });
@@ -40,7 +38,6 @@ router.post('/bulk', authMiddleware, async (req, res) => {
       for (const g of groups) contacts.push(...g.contacts);
     }
 
-    // Deduplicate
     const seen = new Set();
     contacts = contacts.filter(c => {
       if (seen.has(c._id.toString())) return false;
@@ -53,7 +50,6 @@ router.post('/bulk', authMiddleware, async (req, res) => {
       return res.end();
     }
 
-    // Create log
     const log = await MessageLog.create({
       type: messageType === 'template' ? 'template' : 'bulk',
       message, templateName,
@@ -70,24 +66,22 @@ router.post('/bulk', authMiddleware, async (req, res) => {
       const contact = contacts[i];
       try {
         if (messageType === 'template') {
-          // Build template payload
           const templatePayload = {
             name: templateName,
             language: { code: templateLanguage || 'tr' }
           };
 
-          // If header media URL provided, add components
-          if (templateHeaderUrl) {
-            const headerType = templateHeaderType || 'video'; // video, image, document
-            const mediaParam = {};
-            mediaParam[headerType] = { link: templateHeaderUrl };
+          // Header media ID varsa ekle
+          if (templateHeaderId) {
+            const headerType = templateHeaderType || 'video';
+            const mediaParam = { id: templateHeaderId };
             templatePayload.components = [
               {
                 type: 'header',
                 parameters: [
                   {
                     type: headerType,
-                    ...mediaParam
+                    [headerType]: mediaParam
                   }
                 ]
               }
