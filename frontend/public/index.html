@@ -434,14 +434,19 @@ tr:hover td { background:var(--blush); }
               </div>
               <!-- HEADER MEDIA PANEL -->
               <div class="form-group-inner" style="margin-bottom:16px;background:var(--blush);padding:14px;border-radius:10px;border:1.5px solid var(--border)" id="header-media-panel">
-                <label class="form-label">📎 Header Medya ID</label>
-                <p style="font-size:12px;color:var(--text-soft);margin-bottom:10px">Şablonunuzda video/görsel/döküman header varsa medya ID girin</p>
-                <select class="select" id="send-template-header-type" style="margin-bottom:8px">
+                <label class="form-label">📎 Header Medya</label>
+                <p style="font-size:12px;color:var(--text-soft);margin-bottom:10px">Şablonunuzda video/görsel/döküman header varsa yükleyin</p>
+                <select class="select" id="send-template-header-type" style="margin-bottom:8px" onchange="updateMediaPlaceholder()">
                   <option value="video">🎥 Video</option>
                   <option value="image">🖼️ Görsel</option>
                   <option value="document">📄 Döküman</option>
                 </select>
-                <input class="input" id="send-template-header-url" placeholder="Video/Görsel ID (örn: 1234567890)">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                  <input type="file" id="media-file-input" accept="video/*,image/*,.pdf" style="display:none" onchange="uploadMedia()">
+                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('media-file-input').click()" id="upload-btn">📁 Dosya Seç</button>
+                  <span id="media-upload-status" style="font-size:12px;color:var(--text-soft)">Henüz dosya seçilmedi</span>
+                </div>
+                <input class="input" id="send-template-header-id" placeholder="Medya ID (upload sonrası otomatik dolar)" readonly style="background:#f9f9f9">
               </div>
             </div>
             <div class="form-group-inner" style="margin-bottom:16px">
@@ -970,6 +975,58 @@ async function loadTemplateOptions() {
   }
 }
 
+async function uploadMedia() {
+  const fileInput = document.getElementById('media-file-input');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('media-upload-status');
+  const idInput = document.getElementById('send-template-header-id');
+  const uploadBtn = document.getElementById('upload-btn');
+
+  statusEl.textContent = '⏳ Yükleniyor...';
+  statusEl.style.color = 'var(--text-soft)';
+  uploadBtn.disabled = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/messages/upload-media', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (data.id) {
+      idInput.value = data.id;
+      statusEl.textContent = `✅ Yüklendi: ${file.name}`;
+      statusEl.style.color = '#16a34a';
+      toast('Medya başarıyla yüklendi', 'success');
+    } else {
+      statusEl.textContent = `❌ Hata: ${data.error || 'Yükleme başarısız'}`;
+      statusEl.style.color = '#dc2626';
+      toast('Medya yüklenemedi', 'error');
+    }
+  } catch (e) {
+    statusEl.textContent = '❌ Bağlantı hatası';
+    statusEl.style.color = '#dc2626';
+    toast('Medya yüklenemedi', 'error');
+  } finally {
+    uploadBtn.disabled = false;
+  }
+}
+
+function updateMediaPlaceholder() {
+  const type = document.getElementById('send-template-header-type').value;
+  const fileInput = document.getElementById('media-file-input');
+  if (type === 'video') fileInput.accept = 'video/*';
+  else if (type === 'image') fileInput.accept = 'image/*';
+  else fileInput.accept = '.pdf,application/pdf';
+}
+
 function updateHeaderPanel() {
   const sel = document.getElementById('send-template-select');
   const selectedOption = sel.options[sel.selectedIndex];
@@ -1011,7 +1068,7 @@ async function startBulkSend() {
   const message = document.getElementById('send-message').value;
   const templateName = document.getElementById('send-template-input')?.value || document.getElementById('send-template-select').value;
   const templateLanguage = document.getElementById('send-template-lang').value;
-  const templateHeaderId = document.getElementById('send-template-header-url')?.value || '';
+  const templateHeaderId = document.getElementById('send-template-header-id')?.value || '';
   const templateHeaderType = document.getElementById('send-template-header-type')?.value || 'video';
 
   if (!groupIds.length && !contactIds.length) { toast('Lütfen en az bir grup veya kişi seçin', 'error'); return; }
