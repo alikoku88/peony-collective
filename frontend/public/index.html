@@ -607,6 +607,16 @@ tr:hover td { background:var(--blush); }
       <label class="form-label">Açıklama</label>
       <input class="input" id="g-desc" placeholder="Grup açıklaması...">
     </div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Kişi Ekle</label>
+      <input type="text" class="input" placeholder="İsim veya telefon ara..." id="g-contact-search" oninput="filterGroupContacts()" style="margin-bottom:8px">
+      <div style="font-size:12px;color:var(--text-soft);margin-bottom:6px">
+        <span id="g-selected-count">0</span> kişi seçildi
+        <button class="btn btn-outline btn-sm" style="margin-left:8px;padding:2px 8px;font-size:11px" onclick="selectAllGroupContacts()">Tümünü Seç</button>
+        <button class="btn btn-outline btn-sm" style="margin-left:4px;padding:2px 8px;font-size:11px" onclick="clearGroupContacts()">Temizle</button>
+      </div>
+      <div class="checkbox-list" id="g-contact-list" style="max-height:200px"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('group-modal')">İptal</button>
       <button class="btn btn-rose" onclick="saveGroup()">Oluştur</button>
@@ -898,20 +908,73 @@ async function loadGroups() {
   }</tbody></table></div>`;
 }
 
-function openGroupModal() { openModal('group-modal'); }
+let groupContactsAll = [];
+
+async function openGroupModal() {
+  // Load all contacts for selection
+  const data = await api('GET', '/api/contacts?limit=1000');
+  groupContactsAll = data.contacts || [];
+  renderGroupContactList(groupContactsAll);
+  document.getElementById('g-selected-count').textContent = '0';
+  openModal('group-modal');
+}
+
+function renderGroupContactList(contacts) {
+  const el = document.getElementById('g-contact-list');
+  el.innerHTML = contacts.map(c => `
+    <label class="checkbox-item">
+      <input type="checkbox" value="${c._id}" name="g-contact" onchange="updateGroupSelectedCount()">
+      <span>${c.name} <span style="color:var(--text-soft);font-size:12px">${c.phone}</span></span>
+    </label>
+  `).join('') || '<p style="padding:12px;font-size:13px;color:var(--text-soft)">Kişi bulunamadı</p>';
+}
+
+function filterGroupContacts() {
+  const search = document.getElementById('g-contact-search').value.toLowerCase();
+  const filtered = groupContactsAll.filter(c =>
+    c.name.toLowerCase().includes(search) || c.phone.includes(search)
+  );
+  renderGroupContactList(filtered);
+}
+
+function updateGroupSelectedCount() {
+  const count = document.querySelectorAll('[name=g-contact]:checked').length;
+  document.getElementById('g-selected-count').textContent = count;
+}
+
+function selectAllGroupContacts() {
+  document.querySelectorAll('[name=g-contact]').forEach(cb => cb.checked = true);
+  updateGroupSelectedCount();
+}
+
+function clearGroupContacts() {
+  document.querySelectorAll('[name=g-contact]').forEach(cb => cb.checked = false);
+  updateGroupSelectedCount();
+}
 
 async function saveGroup() {
   const name = document.getElementById('g-name').value;
   const description = document.getElementById('g-desc').value;
   if (!name) { toast('Grup adı gerekli', 'error'); return; }
+  const contactIds = [...document.querySelectorAll('[name=g-contact]:checked')].map(el => el.value);
+
+  // 1. Grubu oluştur
   const data = await api('POST', '/api/groups', { name, description });
   if (data.error) { toast(data.error, 'error'); return; }
-  toast('Grup oluşturuldu', 'success');
+
+  // 2. Kişileri ekle
+  if (contactIds.length > 0) {
+    const addResult = await api('POST', `/api/groups/${data._id}/contacts`, { contactIds });
+    if (addResult.error) { toast('Grup oluşturuldu ama kişiler eklenemedi', 'error'); return; }
+  }
+
+  toast(`Grup oluşturuldu: ${contactIds.length} kişi eklendi`, 'success');
   closeModal('group-modal');
   loadGroupsData();
   loadGroups();
   document.getElementById('g-name').value = '';
   document.getElementById('g-desc').value = '';
+  document.getElementById('g-contact-search').value = '';
 }
 
 async function deleteGroup(id) {
