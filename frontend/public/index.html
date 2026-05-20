@@ -418,7 +418,7 @@ tr:hover td { background:var(--blush); }
                 <label class="form-label">Şablon Adı</label>
                 <div style="display:flex;gap:8px;align-items:center">
                   <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: test_)" style="flex:1">
-                  <select class="select" id="send-template-select" style="flex:1" onchange="document.getElementById('send-template-input').value=this.value">
+                  <select class="select" id="send-template-select" style="flex:1" onchange="document.getElementById('send-template-input').value=this.value;updateHeaderPanel()">
                     <option value="">Listeden seç...</option>
                   </select>
                 </div>
@@ -431,6 +431,17 @@ tr:hover td { background:var(--blush); }
                   <option value="en">İngilizce (en)</option>
                   <option value="en_US">İngilizce US (en_US)</option>
                 </select>
+              </div>
+              <!-- HEADER MEDIA PANEL -->
+              <div class="form-group-inner" style="margin-bottom:16px;background:var(--blush);padding:14px;border-radius:10px;border:1.5px solid var(--border)" id="header-media-panel">
+                <label class="form-label">📎 Header Medya</label>
+                <p style="font-size:12px;color:var(--text-soft);margin-bottom:10px">Şablonunuzda video/görsel/döküman header varsa URL girin</p>
+                <select class="select" id="send-template-header-type" style="margin-bottom:8px">
+                  <option value="video">🎥 Video</option>
+                  <option value="image">🖼️ Görsel</option>
+                  <option value="document">📄 Döküman</option>
+                </select>
+                <input class="input" id="send-template-header-url" placeholder="https://ornek.com/video.mp4">
               </div>
             </div>
             <div class="form-group-inner" style="margin-bottom:16px">
@@ -554,7 +565,6 @@ tr:hover td { background:var(--blush); }
 </div><!-- /app -->
 
 <!-- MODALS -->
-<!-- Contact Modal -->
 <div class="modal-overlay" id="contact-modal">
   <div class="modal">
     <h2>Kişi Ekle</h2>
@@ -581,7 +591,6 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- Group Modal -->
 <div class="modal-overlay" id="group-modal">
   <div class="modal">
     <h2>Grup Oluştur</h2>
@@ -600,7 +609,6 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- Import Modal -->
 <div class="modal-overlay" id="import-modal">
   <div class="modal">
     <h2>CSV İçe Aktar</h2>
@@ -617,7 +625,6 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- User Modal -->
 <div class="modal-overlay" id="user-modal">
   <div class="modal">
     <h2>Kullanıcı Ekle</h2>
@@ -647,7 +654,6 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- Schedule Modal -->
 <div class="modal-overlay" id="schedule-modal">
   <div class="modal">
     <h2>Gönderim Zamanla</h2>
@@ -674,7 +680,6 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast-container" id="toast-container"></div>
 
 <script>
@@ -683,6 +688,7 @@ let token = localStorage.getItem('peony_token');
 let currentUser = null;
 let allContacts = [];
 let allGroups = [];
+let allTemplates = [];
 let currentPage = 1;
 let sendMode = 'text';
 let recipientMode = 'groups';
@@ -725,7 +731,6 @@ function logout() {
 document.getElementById('login-email').addEventListener('keypress', e => { if(e.key==='Enter') login(); });
 document.getElementById('login-password').addEventListener('keypress', e => { if(e.key==='Enter') login(); });
 
-// Check existing token
 if (token) {
   fetch(`${API}/api/auth/me`, {headers:{Authorization:`Bearer ${token}`}})
     .then(r => r.json())
@@ -748,7 +753,6 @@ function showPage(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById(`page-${page}`).classList.add('active');
   event?.currentTarget?.classList.add('active');
-  // Load page data
   if (page === 'dashboard') loadDashboard();
   else if (page === 'contacts') loadContacts();
   else if (page === 'groups') loadGroups();
@@ -785,7 +789,6 @@ async function loadDashboard() {
     document.getElementById('stat-groups').textContent = groups.length || 0;
     document.getElementById('stat-sent').textContent = logs.reduce((a,l) => a + (l.sentCount||0), 0);
     document.getElementById('stat-pending').textContent = scheduled.filter(s => s.status === 'pending').length;
-    
     const logEl = document.getElementById('dashboard-logs');
     if (!logs.length) { logEl.innerHTML = '<p style="color:var(--text-soft);font-size:13px">Henüz gönderim yok</p>'; return; }
     logEl.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Tip</th><th>Toplam</th><th>Gönderildi</th><th>Durum</th><th>Tarih</th></tr></thead><tbody>${
@@ -815,10 +818,7 @@ async function loadContacts(page = 1) {
       <td style="color:var(--text-soft)">${formatDate(c.createdAt)}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteContact('${c._id}')">Sil</button></td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-soft)">Kişi bulunamadı</td></tr>';
-    
     renderPagination('contacts-pagination', data.page, data.pages, loadContacts);
-    
-    // Update group filter
     const sel = document.getElementById('contact-group-filter');
     if (sel.options.length === 1) {
       allGroups.forEach(g => { const o = new Option(g.name, g._id); sel.add(o); });
@@ -931,7 +931,6 @@ function renderGroupCheckboxes() {
       <span>${g.name} <span style="color:var(--text-soft);font-size:12px">(${g.contacts?.length || 0} kişi)</span></span>
     </label>
   `).join('') || '<p style="padding:12px;font-size:13px;color:var(--text-soft)">Henüz grup yok</p>';
-  
   document.getElementById('schedule-group-checkboxes').innerHTML = document.getElementById('group-checkboxes').innerHTML;
 }
 
@@ -957,8 +956,9 @@ async function loadTemplateOptions() {
   try {
     const data = await api('GET', '/api/templates');
     if (data.data && data.data.length) {
-      sel.innerHTML = '<option value="">Listeden seç...</option>' + 
-        data.data.map(t => `<option value="${t.name}">${t.name} (${t.status})</option>`).join('');
+      allTemplates = data.data;
+      sel.innerHTML = '<option value="">Listeden seç...</option>' +
+        data.data.map(t => `<option value="${t.name}" data-components='${JSON.stringify(t.components)}'>${t.name} (${t.status})</option>`).join('');
       if (statusEl) statusEl.textContent = `✅ ${data.data.length} şablon yüklendi`;
     } else if (data.error) {
       if (statusEl) statusEl.textContent = `⚠️ Hata: ${data.error} — Manuel giriş yapabilirsiniz`;
@@ -968,6 +968,24 @@ async function loadTemplateOptions() {
   } catch(e) {
     if (statusEl) statusEl.textContent = '⚠️ Bağlantı hatası — Manuel giriş yapabilirsiniz';
   }
+}
+
+function updateHeaderPanel() {
+  const sel = document.getElementById('send-template-select');
+  const selectedOption = sel.options[sel.selectedIndex];
+  const panel = document.getElementById('header-media-panel');
+  if (!selectedOption || !selectedOption.dataset.components) return;
+  try {
+    const components = JSON.parse(selectedOption.dataset.components);
+    const header = components.find(c => c.type === 'HEADER');
+    if (header && ['VIDEO','IMAGE','DOCUMENT'].includes(header.format)) {
+      panel.style.display = 'block';
+      const typeSelect = document.getElementById('send-template-header-type');
+      typeSelect.value = header.format.toLowerCase();
+    } else {
+      panel.style.display = 'none';
+    }
+  } catch(e) {}
 }
 
 function switchSendTab(mode, el) {
@@ -993,6 +1011,8 @@ async function startBulkSend() {
   const message = document.getElementById('send-message').value;
   const templateName = document.getElementById('send-template-input')?.value || document.getElementById('send-template-select').value;
   const templateLanguage = document.getElementById('send-template-lang').value;
+  const templateHeaderUrl = document.getElementById('send-template-header-url')?.value || '';
+  const templateHeaderType = document.getElementById('send-template-header-type')?.value || 'video';
 
   if (!groupIds.length && !contactIds.length) { toast('Lütfen en az bir grup veya kişi seçin', 'error'); return; }
   if (sendMode === 'text' && !message) { toast('Mesaj yazın', 'error'); return; }
@@ -1005,7 +1025,7 @@ async function startBulkSend() {
   document.getElementById('prog-sent').textContent = '0';
   document.getElementById('prog-failed').textContent = '0';
 
-  const body = { message, groupIds, contactIds, messageType: sendMode, templateName, templateLanguage };
+  const body = { message, groupIds, contactIds, messageType: sendMode, templateName, templateLanguage, templateHeaderUrl, templateHeaderType };
   const res = await fetch(`${API}/api/messages/bulk`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -1045,7 +1065,8 @@ function handleSendEvent(ev) {
     document.getElementById('prog-failed').textContent = ev.failed;
     document.getElementById('waiting-msg').textContent = '';
     const dot = ev.status === 'success' ? 'success' : 'failed';
-    logEl.innerHTML += `<div class="log-item"><div class="log-dot ${dot}"></div><span>${ev.contact}</span><span style="margin-left:auto;color:${dot==='success'?'#22c55e':'#ef4444'};font-size:12px">${dot==='success'?'✓':'✗'}</span></div>`;
+    const errMsg = ev.error ? ` — ${ev.error}` : '';
+    logEl.innerHTML += `<div class="log-item"><div class="log-dot ${dot}"></div><span>${ev.contact}</span><span style="margin-left:auto;color:${dot==='success'?'#22c55e':'#ef4444'};font-size:12px">${dot==='success'?'✓':'✗'}${errMsg}</span></div>`;
     logEl.scrollTop = logEl.scrollHeight;
   } else if (ev.type === 'waiting') {
     document.getElementById('waiting-msg').textContent = `⏳ Sonraki mesaj için ${ev.delay} saniye bekleniyor...`;
@@ -1065,13 +1086,18 @@ async function loadTemplates() {
   try {
     const data = await api('GET', '/api/templates');
     if (!data.data?.length) { el.innerHTML = '<p style="color:var(--text-soft);font-size:13px">Şablon bulunamadı veya token eksik</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Şablon Adı</th><th>Kategori</th><th>Dil</th><th>Durum</th></tr></thead><tbody>${
-      data.data.map(t => `<tr>
-        <td><strong>${t.name}</strong></td>
-        <td>${t.category}</td>
-        <td>${t.language}</td>
-        <td>${t.status === 'APPROVED' ? '<span class="badge badge-green">✓ Onaylı</span>' : '<span class="badge badge-orange">Beklemede</span>'}</td>
-      </tr>`).join('')
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Şablon Adı</th><th>Kategori</th><th>Dil</th><th>Header</th><th>Durum</th></tr></thead><tbody>${
+      data.data.map(t => {
+        const header = t.components?.find(c => c.type === 'HEADER');
+        const headerBadge = header ? `<span class="badge badge-orange">${header.format}</span>` : '—';
+        return `<tr>
+          <td><strong>${t.name}</strong></td>
+          <td>${t.category}</td>
+          <td>${t.language}</td>
+          <td>${headerBadge}</td>
+          <td>${t.status === 'APPROVED' ? '<span class="badge badge-green">✓ Onaylı</span>' : '<span class="badge badge-orange">Beklemede</span>'}</td>
+        </tr>`;
+      }).join('')
     }</tbody></table></div>`;
   } catch(e) { el.innerHTML = '<p style="color:#dc2626;font-size:13px">Şablonlar yüklenemedi</p>'; }
 }
