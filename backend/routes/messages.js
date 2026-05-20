@@ -1,10 +1,42 @@
 const express = require('express');
 const axios = require('axios');
+const FormData = require('form-data');
+const multer = require('multer');
 const Contact = require('../models/Contact');
 const Group = require('../models/Group');
 const MessageLog = require('../models/MessageLog');
 const authMiddleware = require('../middleware/auth');
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+// Upload media to WhatsApp
+router.post('/upload-media', authMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'Dosya bulunamadı' });
+
+    const formData = new FormData();
+    formData.append('file', file.buffer, { filename: file.originalname, contentType: file.mimetype });
+    formData.append('type', file.mimetype);
+    formData.append('messaging_product', 'whatsapp');
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v18.0/${process.env.PHONE_NUMBER_ID}/media`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          ...formData.getHeaders()
+        }
+      }
+    );
+
+    res.json({ id: response.data.id });
+  } catch (e) {
+    console.error('Media upload hatası:', JSON.stringify(e.response?.data));
+    res.status(500).json({ error: 'Medya yüklenemedi', detail: e.response?.data });
+  }
+});
 
 // Get message logs
 router.get('/logs', authMiddleware, async (req, res) => {
@@ -71,17 +103,15 @@ router.post('/bulk', authMiddleware, async (req, res) => {
             language: { code: templateLanguage || 'tr' }
           };
 
-          // Header media ID varsa ekle
           if (templateHeaderId) {
             const headerType = templateHeaderType || 'video';
-            const mediaParam = { id: templateHeaderId };
             templatePayload.components = [
               {
                 type: 'header',
                 parameters: [
                   {
                     type: headerType,
-                    [headerType]: mediaParam
+                    [headerType]: { id: templateHeaderId }
                   }
                 ]
               }
