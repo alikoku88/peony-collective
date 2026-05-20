@@ -416,9 +416,13 @@ tr:hover td { background:var(--blush); }
             <div id="send-template-panel" style="display:none">
               <div class="form-group-inner" style="margin-bottom:16px">
                 <label class="form-label">Şablon Adı</label>
-                <select class="select" id="send-template-select">
-                  <option value="">Şablon seçin...</option>
-                </select>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: test_)" style="flex:1">
+                  <select class="select" id="send-template-select" style="flex:1" onchange="document.getElementById('send-template-input').value=this.value">
+                    <option value="">Listeden seç...</option>
+                  </select>
+                </div>
+                <div id="template-load-status" style="font-size:12px;color:var(--text-soft);margin-top:6px"></div>
               </div>
               <div class="form-group-inner" style="margin-bottom:16px">
                 <label class="form-label">Dil</label>
@@ -947,14 +951,23 @@ function filterRecipients() {
 }
 
 async function loadTemplateOptions() {
+  const statusEl = document.getElementById('template-load-status');
+  const sel = document.getElementById('send-template-select');
+  if (statusEl) statusEl.textContent = 'Şablonlar yükleniyor...';
   try {
     const data = await api('GET', '/api/templates');
-    const sel = document.getElementById('send-template-select');
-    if (data.data) {
-      sel.innerHTML = '<option value="">Şablon seçin...</option>' + 
-        data.data.filter(t => t.status === 'APPROVED').map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+    if (data.data && data.data.length) {
+      sel.innerHTML = '<option value="">Listeden seç...</option>' + 
+        data.data.map(t => `<option value="${t.name}">${t.name} (${t.status})</option>`).join('');
+      if (statusEl) statusEl.textContent = `✅ ${data.data.length} şablon yüklendi`;
+    } else if (data.error) {
+      if (statusEl) statusEl.textContent = `⚠️ Hata: ${data.error} — Manuel giriş yapabilirsiniz`;
+    } else {
+      if (statusEl) statusEl.textContent = '⚠️ Şablon bulunamadı — Manuel giriş yapabilirsiniz';
     }
-  } catch(e) {}
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '⚠️ Bağlantı hatası — Manuel giriş yapabilirsiniz';
+  }
 }
 
 function switchSendTab(mode, el) {
@@ -978,7 +991,7 @@ async function startBulkSend() {
   const groupIds = [...document.querySelectorAll('[name=send-group]:checked')].map(el => el.value);
   const contactIds = [...document.querySelectorAll('[name=send-contact]:checked')].map(el => el.value);
   const message = document.getElementById('send-message').value;
-  const templateName = document.getElementById('send-template-select').value;
+  const templateName = document.getElementById('send-template-input')?.value || document.getElementById('send-template-select').value;
   const templateLanguage = document.getElementById('send-template-lang').value;
 
   if (!groupIds.length && !contactIds.length) { toast('Lütfen en az bir grup veya kişi seçin', 'error'); return; }
