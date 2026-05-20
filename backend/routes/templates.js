@@ -3,6 +3,15 @@ const axios = require('axios');
 const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
+// Debug endpoint
+router.get('/debug', authMiddleware, async (req, res) => {
+  res.json({
+    waba_id: process.env.WABA_ID,
+    token_start: process.env.WHATSAPP_TOKEN?.substring(0, 10),
+    phone_id: process.env.PHONE_NUMBER_ID
+  });
+});
+
 // Get WhatsApp templates
 router.get('/', authMiddleware, async (req, res) => {
   try {
