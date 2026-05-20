@@ -435,18 +435,18 @@ tr:hover td { background:var(--blush); }
               <!-- HEADER MEDIA PANEL -->
               <div class="form-group-inner" style="margin-bottom:16px;background:var(--blush);padding:14px;border-radius:10px;border:1.5px solid var(--border)" id="header-media-panel">
                 <label class="form-label">📎 Header Medya</label>
-                <p style="font-size:12px;color:var(--text-soft);margin-bottom:10px">Şablonunuzda video/görsel/döküman header varsa yükleyin</p>
-                <select class="select" id="send-template-header-type" style="margin-bottom:8px" onchange="updateMediaPlaceholder()">
+                <p style="font-size:12px;color:var(--text-soft);margin-bottom:10px">Şablonunuzda video/görsel/döküman header varsa dosyayı seçin</p>
+                <select class="select" id="send-template-header-type" style="margin-bottom:8px" onchange="updateMediaAccept()">
                   <option value="video">🎥 Video</option>
                   <option value="image">🖼️ Görsel</option>
                   <option value="document">📄 Döküman</option>
                 </select>
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-                  <input type="file" id="media-file-input" accept="video/*,image/*,.pdf" style="display:none" onchange="uploadMedia()">
-                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('media-file-input').click()" id="upload-btn">📁 Dosya Seç</button>
+                <input type="file" id="media-file-input" accept="video/*" style="display:none" onchange="uploadMedia()">
+                <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                  <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('media-file-input').click()" id="upload-btn">📁 Dosya Seç</button>
                   <span id="media-upload-status" style="font-size:12px;color:var(--text-soft)">Henüz dosya seçilmedi</span>
                 </div>
-                <input class="input" id="send-template-header-id" placeholder="Medya ID (upload sonrası otomatik dolar)" readonly style="background:#f9f9f9">
+                <input class="input" id="send-template-header-id" placeholder="Medya ID (dosya seçince otomatik dolar)" readonly style="background:#f5f5f5;margin-top:8px;font-size:12px;color:var(--text-soft)">
               </div>
             </div>
             <div class="form-group-inner" style="margin-bottom:16px">
@@ -985,7 +985,7 @@ async function uploadMedia() {
   const uploadBtn = document.getElementById('upload-btn');
 
   statusEl.textContent = '⏳ Yükleniyor...';
-  statusEl.style.color = 'var(--text-soft)';
+  statusEl.style.color = 'var(--rose)';
   uploadBtn.disabled = true;
 
   try {
@@ -1002,11 +1002,11 @@ async function uploadMedia() {
 
     if (data.id) {
       idInput.value = data.id;
-      statusEl.textContent = `✅ Yüklendi: ${file.name}`;
+      statusEl.textContent = `✅ ${file.name} yüklendi`;
       statusEl.style.color = '#16a34a';
       toast('Medya başarıyla yüklendi', 'success');
     } else {
-      statusEl.textContent = `❌ Hata: ${data.error || 'Yükleme başarısız'}`;
+      statusEl.textContent = `❌ ${data.error || 'Yükleme başarısız'}`;
       statusEl.style.color = '#dc2626';
       toast('Medya yüklenemedi', 'error');
     }
@@ -1019,12 +1019,15 @@ async function uploadMedia() {
   }
 }
 
-function updateMediaPlaceholder() {
+function updateMediaAccept() {
   const type = document.getElementById('send-template-header-type').value;
   const fileInput = document.getElementById('media-file-input');
   if (type === 'video') fileInput.accept = 'video/*';
   else if (type === 'image') fileInput.accept = 'image/*';
   else fileInput.accept = '.pdf,application/pdf';
+  document.getElementById('send-template-header-id').value = '';
+  document.getElementById('media-upload-status').textContent = 'Henüz dosya seçilmedi';
+  document.getElementById('media-upload-status').style.color = 'var(--text-soft)';
 }
 
 function updateHeaderPanel() {
