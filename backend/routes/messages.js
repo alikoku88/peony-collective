@@ -20,13 +20,22 @@ router.get('/logs', authMiddleware, async (req, res) => {
 router.post('/bulk', authMiddleware, async (req, res) => {
   const { message, contactIds, groupIds, messageType, templateName, templateLanguage } = req.body;
 
+  console.log('📤 Bulk send request:', { messageType, templateName, contactIds: contactIds?.length, groupIds: groupIds?.length });
+
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const send = (data) => {
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch(e) {
+      console.error('SSE write error:', e.message);
+    }
+  };
 
   try {
     // Collect contacts
@@ -34,11 +43,14 @@ router.post('/bulk', authMiddleware, async (req, res) => {
     if (contactIds && contactIds.length) {
       const found = await Contact.find({ _id: { $in: contactIds } });
       contacts.push(...found);
+      console.log(`Found ${found.length} contacts by ID`);
     }
     if (groupIds && groupIds.length) {
       const groups = await Group.find({ _id: { $in: groupIds } }).populate('contacts');
       for (const g of groups) contacts.push(...g.contacts);
+      console.log(`Found ${contacts.length} contacts from groups`);
     }
+
     // Deduplicate
     const seen = new Set();
     contacts = contacts.filter(c => {
@@ -46,6 +58,8 @@ router.post('/bulk', authMiddleware, async (req, res) => {
       seen.add(c._id.toString());
       return true;
     });
+
+    console.log(`Total unique contacts: ${contacts.length}`);
 
     if (!contacts.length) {
       send({ type: 'error', message: 'Kişi bulunamadı' });
@@ -68,34 +82,42 @@ router.post('/bulk', authMiddleware, async (req, res) => {
     for (let i = 0; i < contacts.length; i++) {
       const contact = contacts[i];
       try {
+        let payload;
         if (messageType === 'template') {
-          await axios.post(
-            `https://graph.facebook.com/v18.0/${process.env.PHONE_NUMBER_ID}/messages`,
-            {
-              messaging_product: 'whatsapp',
-              to: contact.phone,
-              type: 'template',
-              template: { name: templateName, language: { code: templateLanguage || 'tr' } }
-            },
-            { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
-          );
+          payload = {
+            messaging_product: 'whatsapp',
+            to: contact.phone,
+            type: 'template',
+            template: {
+              name: templateName,
+              language: { code: templateLanguage || 'tr' }
+            }
+          };
         } else {
-          await axios.post(
-            `https://graph.facebook.com/v18.0/${process.env.PHONE_NUMBER_ID}/messages`,
-            {
-              messaging_product: 'whatsapp',
-              to: contact.phone,
-              type: 'text',
-              text: { body: message }
-            },
-            { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
-          );
+          payload = {
+            messaging_product: 'whatsapp',
+            to: contact.phone,
+            type: 'text',
+            text: { body: message }
+          };
         }
+
+        console.log(`Sending to ${contact.phone}:`, JSON.stringify(payload));
+
+        const apiRes = await axios.post(
+          `https://graph.facebook.com/v18.0/${process.env.PHONE_NUMBER_ID}/messages`,
+          payload,
+          { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+        );
+
+        console.log(`✅ Sent to ${contact.phone}:`, apiRes.data);
         sent++;
         send({ type: 'progress', current: i + 1, total: contacts.length, sent, failed, contact: contact.name, status: 'success' });
       } catch (e) {
+        const errMsg = e.response?.data?.error?.message || e.message;
+        console.error(`❌ Failed to send to ${contact.phone}:`, errMsg, e.response?.data);
         failed++;
-        send({ type: 'progress', current: i + 1, total: contacts.length, sent, failed, contact: contact.name, status: 'failed', error: e.response?.data?.error?.message });
+        send({ type: 'progress', current: i + 1, total: contacts.length, sent, failed, contact: contact.name, status: 'failed', error: errMsg });
       }
 
       if (i < contacts.length - 1) {
@@ -110,9 +132,11 @@ router.post('/bulk', authMiddleware, async (req, res) => {
     log.failedCount = failed;
     await log.save();
 
+    console.log(`✅ Bulk send complete: ${sent} sent, ${failed} failed`);
     send({ type: 'complete', sent, failed, total: contacts.length });
     res.end();
   } catch (e) {
+    console.error('Bulk send error:', e);
     send({ type: 'error', message: e.message });
     res.end();
   }
