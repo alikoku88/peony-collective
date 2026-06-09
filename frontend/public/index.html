@@ -435,7 +435,7 @@ tr:hover td { background:var(--blush); }
               <div class="form-group-inner" style="margin-bottom:16px">
                 <label class="form-label">Şablon Adı</label>
                 <div style="display:flex;gap:8px;align-items:center">
-                  <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: test_)" style="flex:1">
+                  <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: haziran_)" style="flex:1">
                   <select class="select" id="send-template-select" style="flex:1" onchange="document.getElementById('send-template-input').value=this.value">
                     <option value="">Listeden seç...</option>
                   </select>
@@ -449,6 +449,22 @@ tr:hover td { background:var(--blush); }
                   <option value="en">İngilizce (en)</option>
                   <option value="en_US">İngilizce US (en_US)</option>
                 </select>
+              </div>
+              <div class="form-group-inner" style="margin-bottom:16px">
+                <label class="form-label">Header Görseli (Opsiyonel)</label>
+                <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--blush);cursor:pointer" onclick="document.getElementById('template-image-input').click()">
+                  <div id="template-image-preview" style="display:none;margin-bottom:10px">
+                    <img id="template-image-thumb" style="max-height:80px;border-radius:8px;max-width:100%">
+                  </div>
+                  <div id="template-image-placeholder">
+                    <div style="font-size:24px;margin-bottom:6px">🖼️</div>
+                    <div style="font-size:13px;color:var(--text-soft)">Görsel seçmek için tıklayın</div>
+                    <div style="font-size:11px;color:var(--text-soft);margin-top:4px">JPG, PNG — Max 5MB</div>
+                  </div>
+                  <input type="file" id="template-image-input" accept="image/jpeg,image/png" style="display:none" onchange="previewTemplateImage(this)">
+                </div>
+                <div id="image-upload-status" style="font-size:12px;margin-top:6px"></div>
+                <button class="btn btn-outline btn-sm" style="margin-top:8px;display:none" id="clear-image-btn" onclick="clearTemplateImage()">✕ Görseli Kaldır</button>
               </div>
             </div>
             <div class="form-group-inner" style="margin-bottom:16px">
@@ -1248,6 +1264,60 @@ function switchRecipientTab(mode, el) {
   if (mode === 'contacts') loadContactCheckboxes();
 }
 
+// ========== TEMPLATE IMAGE UPLOAD ==========
+let uploadedMediaId = null;
+
+function previewTemplateImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('Görsel 5MB\'dan büyük olamaz', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('template-image-thumb').src = e.target.result;
+    document.getElementById('template-image-preview').style.display = 'block';
+    document.getElementById('template-image-placeholder').style.display = 'none';
+    document.getElementById('clear-image-btn').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearTemplateImage() {
+  uploadedMediaId = null;
+  document.getElementById('template-image-input').value = '';
+  document.getElementById('template-image-preview').style.display = 'none';
+  document.getElementById('template-image-placeholder').style.display = 'block';
+  document.getElementById('clear-image-btn').style.display = 'none';
+  document.getElementById('image-upload-status').textContent = '';
+}
+
+async function uploadTemplateImage() {
+  const input = document.getElementById('template-image-input');
+  const file = input.files[0];
+  if (!file) return null;
+  const statusEl = document.getElementById('image-upload-status');
+  statusEl.textContent = '⏳ Görsel yükleniyor...';
+  statusEl.style.color = 'var(--text-soft)';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API}/api/messages/upload-media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    uploadedMediaId = data.id;
+    statusEl.textContent = '✅ Görsel yüklendi';
+    statusEl.style.color = '#16a34a';
+    return data.id;
+  } catch(e) {
+    statusEl.textContent = `❌ Hata: ${e.message}`;
+    statusEl.style.color = '#dc2626';
+    return null;
+  }
+}
+
 async function startBulkSend() {
   const groupIds = [...document.querySelectorAll('[name=send-group]:checked')].map(el => el.value);
   const contactIds = [...document.querySelectorAll('[name=send-contact]:checked')].map(el => el.value);
@@ -1259,6 +1329,14 @@ async function startBulkSend() {
   if (sendMode === 'text' && !message) { toast('Mesaj yazın', 'error'); return; }
   if (sendMode === 'template' && !templateName) { toast('Şablon seçin', 'error'); return; }
 
+  // Upload image if selected
+  let mediaId = null;
+  const imageFile = document.getElementById('template-image-input')?.files[0];
+  if (sendMode === 'template' && imageFile) {
+    mediaId = await uploadTemplateImage();
+    if (!mediaId) { toast('Görsel yüklenemedi, lütfen tekrar deneyin', 'error'); return; }
+  }
+
   document.getElementById('send-progress-card').style.display = 'block';
   document.getElementById('send-info-card').style.display = 'none';
   document.getElementById('send-log').innerHTML = '';
@@ -1266,7 +1344,7 @@ async function startBulkSend() {
   document.getElementById('prog-sent').textContent = '0';
   document.getElementById('prog-failed').textContent = '0';
 
-  const body = { message, groupIds, contactIds, messageType: sendMode, templateName, templateLanguage };
+  const body = { message, groupIds, contactIds, messageType: sendMode, templateName, templateLanguage, mediaId };
   const res = await fetch(`${API}/api/messages/bulk`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
