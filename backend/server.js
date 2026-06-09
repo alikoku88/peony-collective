@@ -12,6 +12,7 @@ const messageRoutes = require('./routes/messages');
 const templateRoutes = require('./routes/templates');
 const webhookRoutes = require('./routes/webhook');
 const scheduledRoutes = require('./routes/scheduled');
+const incomingRoutes = require('./routes/incoming');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/scheduled', scheduledRoutes);
+app.use('/api/incoming', incomingRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Catch-all: serve frontend
