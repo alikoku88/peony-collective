@@ -1179,6 +1179,7 @@ async function cleanPhones() {
 }
 
 
+async function deleteContact(id) {
   if (!confirm('Bu kişiyi silmek istediğinizden emin misiniz?')) return;
   await api('DELETE', `/api/contacts/${id}`);
   toast('Kişi silindi', 'success');
