@@ -60,21 +60,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete contact
-router.delete('/:id', authMiddleware, async (req, res) => {
-  try {
-    await Contact.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: 'Sunucu hatası' });
-  }
-});
-
-// ✅ Delete ALL contacts
+// ✅ Delete ALL contacts - must be BEFORE /:id route
 router.delete('/delete-all', authMiddleware, async (req, res) => {
   try {
     const result = await Contact.deleteMany({});
-    // Also clear group contact lists
     await Group.updateMany({}, { $set: { contacts: [] } });
     console.log(`🗑️ Deleted all ${result.deletedCount} contacts`);
     res.json({ deleted: result.deletedCount });
@@ -83,10 +72,10 @@ router.delete('/delete-all', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Clean phone numbers — remove + from all
+// ✅ Clean phone numbers - must be BEFORE /:id route
 router.post('/clean-phones', authMiddleware, async (req, res) => {
   try {
-    const contacts = await Contact.find({ phone: /^\+/ });
+    const contacts = await Contact.find({ phone: /^\+|.*\s.*|.*\(.*/ });
     let updated = 0;
     for (const c of contacts) {
       const cleaned = normalizePhone(c.phone);
@@ -94,13 +83,21 @@ router.post('/clean-phones', authMiddleware, async (req, res) => {
         try {
           await Contact.findByIdAndUpdate(c._id, { phone: cleaned });
           updated++;
-        } catch(e) {
-          // Skip duplicates
-        }
+        } catch(e) {}
       }
     }
     console.log(`✅ Cleaned ${updated} phone numbers`);
     res.json({ updated, total: contacts.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Delete single contact
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    await Contact.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Sunucu hatası' });
   }
