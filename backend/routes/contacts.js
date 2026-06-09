@@ -8,6 +8,12 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Normalize phone
+function normalizePhone(phone) {
+  if (!phone) return phone;
+  return phone.replace(/[\s\+\-\(\)\.]/g, '');
+}
+
 // Get all contacts
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -33,7 +39,8 @@ router.get('/', authMiddleware, async (req, res) => {
 // Create contact
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const contact = await Contact.create(req.body);
+    const data = { ...req.body, phone: normalizePhone(req.body.phone) };
+    const contact = await Contact.create(data);
     res.json(contact);
   } catch (e) {
     if (e.code === 11000) return res.status(400).json({ error: 'Bu telefon numarası zaten kayıtlı' });
@@ -44,7 +51,9 @@ router.post('/', authMiddleware, async (req, res) => {
 // Update contact
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const contact = await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const data = { ...req.body };
+    if (data.phone) data.phone = normalizePhone(data.phone);
+    const contact = await Contact.findByIdAndUpdate(req.params.id, data, { new: true });
     res.json(contact);
   } catch (e) {
     res.status(500).json({ error: 'Sunucu hatası' });
@@ -61,6 +70,42 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Delete ALL contacts
+router.delete('/delete-all', authMiddleware, async (req, res) => {
+  try {
+    const result = await Contact.deleteMany({});
+    // Also clear group contact lists
+    await Group.updateMany({}, { $set: { contacts: [] } });
+    console.log(`🗑️ Deleted all ${result.deletedCount} contacts`);
+    res.json({ deleted: result.deletedCount });
+  } catch (e) {
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// ✅ Clean phone numbers — remove + from all
+router.post('/clean-phones', authMiddleware, async (req, res) => {
+  try {
+    const contacts = await Contact.find({ phone: /^\+/ });
+    let updated = 0;
+    for (const c of contacts) {
+      const cleaned = normalizePhone(c.phone);
+      if (cleaned !== c.phone) {
+        try {
+          await Contact.findByIdAndUpdate(c._id, { phone: cleaned });
+          updated++;
+        } catch(e) {
+          // Skip duplicates
+        }
+      }
+    }
+    console.log(`✅ Cleaned ${updated} phone numbers`);
+    res.json({ updated, total: contacts.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
 // CSV Import
 router.post('/import', authMiddleware, upload.single('file'), async (req, res) => {
   try {
@@ -71,7 +116,8 @@ router.post('/import', authMiddleware, upload.single('file'), async (req, res) =
 
     for (const record of records) {
       try {
-        const phone = (record.phone || record.Phone || record.telefon || record.Telefon || '').replace(/\s/g, '');
+        const rawPhone = record.phone || record.Phone || record.telefon || record.Telefon || '';
+        const phone = normalizePhone(rawPhone);
         const name = record.name || record.Name || record.isim || record.İsim || 'İsimsiz';
         if (!phone) { skipped++; continue; }
         

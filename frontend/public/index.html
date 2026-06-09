@@ -366,7 +366,9 @@ tr:hover td { background:var(--blush); }
             </select>
           </div>
           <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="cleanPhones()">🧹 Numaraları Temizle</button>
             <button class="btn btn-outline btn-sm" onclick="openImportModal()">📥 CSV İçe Aktar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAllContacts()">🗑️ Tümünü Sil</button>
             <button class="btn btn-rose btn-sm" onclick="openContactModal()">+ Kişi Ekle</button>
           </div>
         </div>
@@ -1153,7 +1155,30 @@ async function loadContacts(page = 1) {
 
 function searchContacts() { loadContacts(1); }
 
-async function deleteContact(id) {
+async function deleteAllContacts() {
+  if (!confirm('⚠️ TÜM KİŞİLER SİLİNECEK! Bu işlem geri alınamaz. Emin misiniz?')) return;
+  if (!confirm('Son kez onaylayın — tüm kişiler ve grup üyelikleri silinecek!')) return;
+  try {
+    const data = await api('DELETE', '/api/contacts/delete-all');
+    if (data.error) { toast(data.error, 'error'); return; }
+    toast(`${data.deleted} kişi silindi`, 'success');
+    selectedContactIds.clear();
+    updateBulkBar();
+    loadContacts(1);
+  } catch(e) { toast('Hata oluştu', 'error'); }
+}
+
+async function cleanPhones() {
+  if (!confirm('Tüm numaraların başındaki +, boşluk ve tire işaretleri temizlenecek. Devam?')) return;
+  try {
+    const data = await api('POST', '/api/contacts/clean-phones');
+    if (data.error) { toast(data.error, 'error'); return; }
+    toast(`${data.updated} numara temizlendi`, 'success');
+    loadContacts(currentPage);
+  } catch(e) { toast('Hata oluştu', 'error'); }
+}
+
+
   if (!confirm('Bu kişiyi silmek istediğinizden emin misiniz?')) return;
   await api('DELETE', `/api/contacts/${id}`);
   toast('Kişi silindi', 'success');
