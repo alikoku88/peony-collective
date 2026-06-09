@@ -352,12 +352,12 @@ tr:hover td { background:var(--blush); }
       </div>
       <div class="card">
         <div class="card-header">
-          <div style="display:flex;gap:10px;align-items:center">
-            <div class="search-input-wrap" style="width:280px">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div class="search-input-wrap" style="width:260px">
               <span class="icon">🔍</span>
               <input type="text" placeholder="İsim veya telefon ara..." id="contact-search" oninput="searchContacts()">
             </div>
-            <select class="select" style="width:180px" id="contact-group-filter" onchange="searchContacts()">
+            <select class="select" style="width:160px" id="contact-group-filter" onchange="searchContacts()">
               <option value="">Tüm Gruplar</option>
             </select>
           </div>
@@ -366,10 +366,24 @@ tr:hover td { background:var(--blush); }
             <button class="btn btn-rose btn-sm" onclick="openContactModal()">+ Kişi Ekle</button>
           </div>
         </div>
+
+        <!-- BULK ACTION BAR -->
+        <div id="bulk-action-bar" style="display:none;background:var(--rose-light);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+          <span id="selected-count" style="font-size:13px;font-weight:500;color:var(--rose-dark)">0 kişi seçildi</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-sm" onclick="selectAllContacts()">Tümünü Seç</button>
+          <button class="btn btn-outline btn-sm" onclick="deselectAllContacts()">Seçimi Kaldır</button>
+          <button class="btn btn-rose btn-sm" onclick="openAddToGroupModal()">🗂️ Gruba Ekle</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteContacts()">🗑️ Seçilenleri Sil</button>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Ad Soyad</th><th>Telefon</th><th>Gruplar</th><th>Tarih</th><th>İşlem</th></tr>
+              <tr>
+                <th style="width:36px"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this)" style="accent-color:var(--rose);width:15px;height:15px"></th>
+                <th>Ad Soyad</th><th>Telefon</th><th>Gruplar</th><th>Tarih</th><th>İşlem</th>
+              </tr>
             </thead>
             <tbody id="contacts-table"></tbody>
           </table>
@@ -647,7 +661,28 @@ tr:hover td { background:var(--blush); }
   </div>
 </div>
 
-<!-- Schedule Modal -->
+<!-- Bulk Add to Group Modal -->
+<div class="modal-overlay" id="add-to-group-modal">
+  <div class="modal">
+    <h2>Gruba Ekle</h2>
+    <p style="font-size:13px;color:var(--text-soft);margin-bottom:16px">Seçili kişileri mevcut bir gruba ekleyin veya yeni grup oluşturun.</p>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Mevcut Grup Seç</label>
+      <select class="select" id="bulk-group-select">
+        <option value="">Grup seçin...</option>
+      </select>
+    </div>
+    <div style="text-align:center;color:var(--text-soft);font-size:13px;margin:8px 0">— veya —</div>
+    <div class="form-group-inner" style="margin-bottom:16px">
+      <label class="form-label">Yeni Grup Oluştur</label>
+      <input class="input" id="bulk-new-group-name" placeholder="Yeni grup adı...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('add-to-group-modal')">İptal</button>
+      <button class="btn btn-rose" onclick="bulkAddToGroup()">Ekle</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="schedule-modal">
   <div class="modal">
     <h2>Gönderim Zamanla</h2>
@@ -800,7 +835,97 @@ async function loadDashboard() {
   } catch(e) {}
 }
 
-// ========== CONTACTS ==========
+// ========== BULK SELECTION ==========
+let selectedContactIds = new Set();
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-action-bar');
+  const count = document.getElementById('selected-count');
+  if (selectedContactIds.size > 0) {
+    bar.style.display = 'flex';
+    count.textContent = `${selectedContactIds.size} kişi seçildi`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function toggleContactSelect(id, cb) {
+  if (cb.checked) selectedContactIds.add(id);
+  else selectedContactIds.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(masterCb) {
+  const cbs = document.querySelectorAll('.contact-row-cb');
+  cbs.forEach(cb => {
+    cb.checked = masterCb.checked;
+    if (masterCb.checked) selectedContactIds.add(cb.dataset.id);
+    else selectedContactIds.delete(cb.dataset.id);
+  });
+  updateBulkBar();
+}
+
+function selectAllContacts() {
+  const cbs = document.querySelectorAll('.contact-row-cb');
+  cbs.forEach(cb => { cb.checked = true; selectedContactIds.add(cb.dataset.id); });
+  document.getElementById('select-all-cb').checked = true;
+  updateBulkBar();
+}
+
+function deselectAllContacts() {
+  selectedContactIds.clear();
+  document.querySelectorAll('.contact-row-cb').forEach(cb => cb.checked = false);
+  document.getElementById('select-all-cb').checked = false;
+  updateBulkBar();
+}
+
+async function bulkDeleteContacts() {
+  if (!selectedContactIds.size) return;
+  if (!confirm(`${selectedContactIds.size} kişiyi silmek istediğinizden emin misiniz?`)) return;
+  let deleted = 0;
+  for (const id of selectedContactIds) {
+    try { await api('DELETE', `/api/contacts/${id}`); deleted++; } catch(e) {}
+  }
+  toast(`${deleted} kişi silindi`, 'success');
+  selectedContactIds.clear();
+  updateBulkBar();
+  loadContacts(currentPage);
+}
+
+function openAddToGroupModal() {
+  if (!selectedContactIds.size) { toast('Önce kişi seçin', 'error'); return; }
+  const sel = document.getElementById('bulk-group-select');
+  sel.innerHTML = '<option value="">Grup seçin...</option>' + allGroups.map(g => `<option value="${g._id}">${g.name}</option>`).join('');
+  document.getElementById('bulk-new-group-name').value = '';
+  openModal('add-to-group-modal');
+}
+
+async function bulkAddToGroup() {
+  const groupId = document.getElementById('bulk-group-select').value;
+  const newGroupName = document.getElementById('bulk-new-group-name').value.trim();
+  const contactIds = [...selectedContactIds];
+
+  if (!groupId && !newGroupName) { toast('Grup seçin veya yeni grup adı girin', 'error'); return; }
+
+  try {
+    let targetGroupId = groupId;
+    if (newGroupName) {
+      const newGroup = await api('POST', '/api/groups', { name: newGroupName });
+      if (newGroup.error) { toast(newGroup.error, 'error'); return; }
+      targetGroupId = newGroup._id;
+      allGroups.push(newGroup);
+    }
+    const res = await api('POST', `/api/groups/${targetGroupId}/contacts`, { contactIds });
+    if (res.error) { toast(res.error, 'error'); return; }
+    toast(`${contactIds.length} kişi gruba eklendi`, 'success');
+    closeModal('add-to-group-modal');
+    deselectAllContacts();
+    loadContacts(currentPage);
+    loadGroupsData();
+  } catch(e) { toast('Hata oluştu', 'error'); }
+}
+
+
 async function loadContacts(page = 1) {
   currentPage = page;
   const search = document.getElementById('contact-search')?.value || '';
@@ -809,12 +934,13 @@ async function loadContacts(page = 1) {
     const data = await api('GET', `/api/contacts?page=${page}&limit=20&search=${encodeURIComponent(search)}&group=${group}`);
     const tbody = document.getElementById('contacts-table');
     tbody.innerHTML = data.contacts.map(c => `<tr>
+      <td><input type="checkbox" class="contact-row-cb" data-id="${c._id}" style="accent-color:var(--rose);width:15px;height:15px" onchange="toggleContactSelect('${c._id}', this)" ${selectedContactIds.has(c._id) ? 'checked' : ''}></td>
       <td><strong>${c.name}</strong></td>
       <td style="font-family:monospace;font-size:13px">${c.phone}</td>
       <td>${c.groups?.map(g => `<span class="badge badge-rose" style="margin-right:4px">${g.name}</span>`).join('') || '—'}</td>
       <td style="color:var(--text-soft)">${formatDate(c.createdAt)}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteContact('${c._id}')">Sil</button></td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-soft)">Kişi bulunamadı</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-soft)">Kişi bulunamadı</td></tr>';
     
     renderPagination('contacts-pagination', data.page, data.pages, loadContacts);
     
