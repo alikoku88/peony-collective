@@ -435,13 +435,20 @@ tr:hover td { background:var(--blush); }
               <div class="form-group-inner" style="margin-bottom:16px">
                 <label class="form-label">Şablon Adı</label>
                 <div style="display:flex;gap:8px;align-items:center">
-                  <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: haziran_)" style="flex:1">
-                  <select class="select" id="send-template-select" style="flex:1" onchange="document.getElementById('send-template-input').value=this.value">
+                  <input class="input" id="send-template-input" placeholder="Şablon adını yazın (örn: haziran_)" style="flex:1" oninput="onTemplateNameChange(this.value)">
+                  <select class="select" id="send-template-select" style="flex:1" onchange="selectTemplate(this.value)">
                     <option value="">Listeden seç...</option>
                   </select>
                 </div>
                 <div id="template-load-status" style="font-size:12px;color:var(--text-soft);margin-top:6px"></div>
               </div>
+
+              <!-- Template preview card -->
+              <div id="template-preview-card" style="display:none;background:var(--blush);border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid var(--border)">
+                <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-soft);margin-bottom:8px">Şablon Önizleme</div>
+                <div id="template-preview-content" style="font-size:13px;color:var(--text-mid);line-height:1.6"></div>
+              </div>
+
               <div class="form-group-inner" style="margin-bottom:16px">
                 <label class="form-label">Dil</label>
                 <select class="select" id="send-template-lang">
@@ -450,21 +457,62 @@ tr:hover td { background:var(--blush); }
                   <option value="en_US">İngilizce US (en_US)</option>
                 </select>
               </div>
-              <div class="form-group-inner" style="margin-bottom:16px">
-                <label class="form-label">Header Görseli (Opsiyonel)</label>
-                <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--blush);cursor:pointer" onclick="document.getElementById('template-image-input').click()">
-                  <div id="template-image-preview" style="display:none;margin-bottom:10px">
-                    <img id="template-image-thumb" style="max-height:80px;border-radius:8px;max-width:100%">
+
+              <!-- Dynamic header section — shown only when template has a header -->
+              <div id="template-header-section" style="display:none">
+                <!-- IMAGE header -->
+                <div id="header-image-panel" style="display:none" class="form-group-inner" style="margin-bottom:16px">
+                  <label class="form-label">🖼️ Header Görseli</label>
+                  <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--blush);cursor:pointer" onclick="document.getElementById('template-image-input').click()">
+                    <div id="template-image-preview" style="display:none;margin-bottom:10px">
+                      <img id="template-image-thumb" style="max-height:80px;border-radius:8px;max-width:100%">
+                    </div>
+                    <div id="template-image-placeholder">
+                      <div style="font-size:24px;margin-bottom:6px">🖼️</div>
+                      <div style="font-size:13px;color:var(--text-soft)">Görsel seçmek için tıklayın</div>
+                      <div style="font-size:11px;color:var(--text-soft);margin-top:4px">JPG, PNG — Max 5MB</div>
+                    </div>
+                    <input type="file" id="template-image-input" accept="image/jpeg,image/png" style="display:none" onchange="previewTemplateImage(this)">
                   </div>
-                  <div id="template-image-placeholder">
-                    <div style="font-size:24px;margin-bottom:6px">🖼️</div>
-                    <div style="font-size:13px;color:var(--text-soft)">Görsel seçmek için tıklayın</div>
-                    <div style="font-size:11px;color:var(--text-soft);margin-top:4px">JPG, PNG — Max 5MB</div>
-                  </div>
-                  <input type="file" id="template-image-input" accept="image/jpeg,image/png" style="display:none" onchange="previewTemplateImage(this)">
+                  <div id="image-upload-status" style="font-size:12px;margin-top:6px"></div>
+                  <button class="btn btn-outline btn-sm" style="margin-top:8px;display:none" id="clear-image-btn" onclick="clearTemplateImage()">✕ Görseli Kaldır</button>
                 </div>
-                <div id="image-upload-status" style="font-size:12px;margin-top:6px"></div>
-                <button class="btn btn-outline btn-sm" style="margin-top:8px;display:none" id="clear-image-btn" onclick="clearTemplateImage()">✕ Görseli Kaldır</button>
+
+                <!-- VIDEO header -->
+                <div id="header-video-panel" style="display:none" class="form-group-inner" style="margin-bottom:16px">
+                  <label class="form-label">🎥 Header Videosu</label>
+                  <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--blush);cursor:pointer" onclick="document.getElementById('template-video-input').click()">
+                    <div id="template-video-preview" style="display:none;margin-bottom:10px">
+                      <video id="template-video-thumb" style="max-height:80px;border-radius:8px;max-width:100%" controls></video>
+                    </div>
+                    <div id="template-video-placeholder">
+                      <div style="font-size:24px;margin-bottom:6px">🎥</div>
+                      <div style="font-size:13px;color:var(--text-soft)">Video seçmek için tıklayın</div>
+                      <div style="font-size:11px;color:var(--text-soft);margin-top:4px">MP4 — Max 16MB</div>
+                    </div>
+                    <input type="file" id="template-video-input" accept="video/mp4" style="display:none" onchange="previewTemplateVideo(this)">
+                  </div>
+                  <div id="video-upload-status" style="font-size:12px;margin-top:6px"></div>
+                </div>
+
+                <!-- DOCUMENT header -->
+                <div id="header-document-panel" style="display:none" class="form-group-inner" style="margin-bottom:16px">
+                  <label class="form-label">📄 Header Belgesi</label>
+                  <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;background:var(--blush);cursor:pointer" onclick="document.getElementById('template-doc-input').click()">
+                    <div id="template-doc-placeholder">
+                      <div style="font-size:24px;margin-bottom:6px">📄</div>
+                      <div style="font-size:13px;color:var(--text-soft)">PDF seçmek için tıklayın</div>
+                    </div>
+                    <input type="file" id="template-doc-input" accept="application/pdf" style="display:none" onchange="previewTemplateDoc(this)">
+                  </div>
+                  <div id="doc-upload-status" style="font-size:12px;margin-top:6px"></div>
+                </div>
+
+                <!-- TEXT header -->
+                <div id="header-text-panel" style="display:none" class="form-group-inner" style="margin-bottom:16px">
+                  <label class="form-label">📝 Header Metni</label>
+                  <input class="input" id="header-text-input" placeholder="Header metni...">
+                </div>
               </div>
             </div>
             <div class="form-group-inner" style="margin-bottom:16px">
@@ -1264,8 +1312,86 @@ function switchRecipientTab(mode, el) {
   if (mode === 'contacts') loadContactCheckboxes();
 }
 
-// ========== TEMPLATE IMAGE UPLOAD ==========
+// ========== TEMPLATE AUTO-DETECT ==========
 let uploadedMediaId = null;
+let currentTemplateData = null;
+let templateNameTimer = null;
+
+function onTemplateNameChange(value) {
+  clearTimeout(templateNameTimer);
+  if (!value || value.length < 2) {
+    hideTemplateHeader();
+    return;
+  }
+  templateNameTimer = setTimeout(() => fetchTemplateDetails(value), 600);
+}
+
+function selectTemplate(value) {
+  if (!value) return;
+  document.getElementById('send-template-input').value = value;
+  fetchTemplateDetails(value);
+}
+
+async function fetchTemplateDetails(name) {
+  if (!name) return;
+  try {
+    const data = await api('GET', '/api/templates');
+    if (!data.data) return;
+    const template = data.data.find(t => t.name === name);
+    if (!template) { hideTemplateHeader(); return; }
+    currentTemplateData = template;
+    showTemplatePreview(template);
+    detectAndShowHeader(template);
+    // Auto-set language
+    if (template.language) {
+      const langSel = document.getElementById('send-template-lang');
+      const opt = [...langSel.options].find(o => o.value === template.language);
+      if (opt) langSel.value = template.language;
+    }
+  } catch(e) {}
+}
+
+function showTemplatePreview(template) {
+  const card = document.getElementById('template-preview-card');
+  const content = document.getElementById('template-preview-content');
+  const body = template.components?.find(c => c.type === 'BODY');
+  const footer = template.components?.find(c => c.type === 'FOOTER');
+  if (body) {
+    card.style.display = 'block';
+    content.innerHTML = `<div style="white-space:pre-wrap">${body.text || ''}</div>${footer ? `<div style="color:var(--text-soft);font-size:12px;margin-top:6px">${footer.text}</div>` : ''}`;
+  }
+}
+
+function detectAndShowHeader(template) {
+  const header = template.components?.find(c => c.type === 'HEADER');
+  hideTemplateHeader();
+  if (!header) return;
+
+  document.getElementById('template-header-section').style.display = 'block';
+  const format = header.format;
+
+  if (format === 'IMAGE') {
+    document.getElementById('header-image-panel').style.display = 'block';
+  } else if (format === 'VIDEO') {
+    document.getElementById('header-video-panel').style.display = 'block';
+  } else if (format === 'DOCUMENT') {
+    document.getElementById('header-document-panel').style.display = 'block';
+  } else if (format === 'TEXT') {
+    document.getElementById('header-text-panel').style.display = 'block';
+    const textEl = document.getElementById('header-text-input');
+    if (header.text) textEl.placeholder = header.text;
+  }
+}
+
+function hideTemplateHeader() {
+  document.getElementById('template-header-section').style.display = 'none';
+  document.getElementById('header-image-panel').style.display = 'none';
+  document.getElementById('header-video-panel').style.display = 'none';
+  document.getElementById('header-document-panel').style.display = 'none';
+  document.getElementById('header-text-panel').style.display = 'none';
+  document.getElementById('template-preview-card').style.display = 'none';
+  uploadedMediaId = null;
+}
 
 function previewTemplateImage(input) {
   const file = input.files[0];
@@ -1281,6 +1407,21 @@ function previewTemplateImage(input) {
   reader.readAsDataURL(file);
 }
 
+function previewTemplateVideo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('template-video-thumb').src = url;
+  document.getElementById('template-video-preview').style.display = 'block';
+  document.getElementById('template-video-placeholder').style.display = 'none';
+}
+
+function previewTemplateDoc(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('template-doc-placeholder').innerHTML = `<div style="font-size:24px">📄</div><div style="font-size:13px;color:var(--rose)">${file.name}</div>`;
+}
+
 function clearTemplateImage() {
   uploadedMediaId = null;
   document.getElementById('template-image-input').value = '';
@@ -1290,13 +1431,18 @@ function clearTemplateImage() {
   document.getElementById('image-upload-status').textContent = '';
 }
 
-async function uploadTemplateImage() {
-  const input = document.getElementById('template-image-input');
-  const file = input.files[0];
+async function uploadTemplateMedia() {
+  // Detect which file is selected
+  const imageFile = document.getElementById('template-image-input')?.files[0];
+  const videoFile = document.getElementById('template-video-input')?.files[0];
+  const docFile = document.getElementById('template-doc-input')?.files[0];
+  const file = imageFile || videoFile || docFile;
   if (!file) return null;
-  const statusEl = document.getElementById('image-upload-status');
-  statusEl.textContent = '⏳ Görsel yükleniyor...';
-  statusEl.style.color = 'var(--text-soft)';
+
+  const statusId = imageFile ? 'image-upload-status' : videoFile ? 'video-upload-status' : 'doc-upload-status';
+  const statusEl = document.getElementById(statusId);
+  if (statusEl) { statusEl.textContent = '⏳ Yükleniyor...'; statusEl.style.color = 'var(--text-soft)'; }
+
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -1308,15 +1454,14 @@ async function uploadTemplateImage() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     uploadedMediaId = data.id;
-    statusEl.textContent = '✅ Görsel yüklendi';
-    statusEl.style.color = '#16a34a';
+    if (statusEl) { statusEl.textContent = '✅ Yüklendi'; statusEl.style.color = '#16a34a'; }
     return data.id;
   } catch(e) {
-    statusEl.textContent = `❌ Hata: ${e.message}`;
-    statusEl.style.color = '#dc2626';
+    if (statusEl) { statusEl.textContent = `❌ ${e.message}`; statusEl.style.color = '#dc2626'; }
     return null;
   }
 }
+
 
 async function startBulkSend() {
   const groupIds = [...document.querySelectorAll('[name=send-group]:checked')].map(el => el.value);
@@ -1329,12 +1474,15 @@ async function startBulkSend() {
   if (sendMode === 'text' && !message) { toast('Mesaj yazın', 'error'); return; }
   if (sendMode === 'template' && !templateName) { toast('Şablon seçin', 'error'); return; }
 
-  // Upload image if selected
+  // Upload media if selected
   let mediaId = null;
-  const imageFile = document.getElementById('template-image-input')?.files[0];
-  if (sendMode === 'template' && imageFile) {
-    mediaId = await uploadTemplateImage();
-    if (!mediaId) { toast('Görsel yüklenemedi, lütfen tekrar deneyin', 'error'); return; }
+  if (sendMode === 'template') {
+    const header = currentTemplateData?.components?.find(c => c.type === 'HEADER');
+    const hasMediaHeader = header && ['IMAGE','VIDEO','DOCUMENT'].includes(header?.format);
+    if (hasMediaHeader) {
+      mediaId = await uploadTemplateMedia();
+      if (!mediaId) { toast('Medya yüklenemedi, lütfen tekrar deneyin', 'error'); return; }
+    }
   }
 
   document.getElementById('send-progress-card').style.display = 'block';
