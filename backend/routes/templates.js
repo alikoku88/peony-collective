@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const response = await axios.get(
-      `https://graph.facebook.com/v18.0/${process.env.PHONE_NUMBER_ID}/message_templates`,
+      `https://graph.facebook.com/v18.0/${process.env.WABA_ID}/message_templates`,
       { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
     );
     res.json(response.data);
