@@ -374,8 +374,9 @@ tr:hover td { background:var(--blush); }
         </div>
 
         <!-- BULK ACTION BAR -->
-        <div id="bulk-action-bar" style="display:none;background:var(--rose-light);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+        <div id="bulk-action-bar" style="display:none;background:var(--rose-light);border-radius:10px;padding:10px 16px;margin-bottom:14px;align-items:center;gap:10px;flex-wrap:wrap">
           <span id="selected-count" style="font-size:13px;font-weight:500;color:var(--rose-dark)">0 kişi seçildi</span>
+          <span id="select-all-hint" style="font-size:12px;color:var(--rose);cursor:pointer;text-decoration:underline;display:none" onclick="selectAllContacts()">Tüm kişileri seç →</span>
           <div style="flex:1"></div>
           <button class="btn btn-outline btn-sm" onclick="selectAllContacts()">Tümünü Seç</button>
           <button class="btn btn-outline btn-sm" onclick="deselectAllContacts()">Seçimi Kaldır</button>
@@ -1042,11 +1043,14 @@ let selectedContactIds = new Set();
 function updateBulkBar() {
   const bar = document.getElementById('bulk-action-bar');
   const count = document.getElementById('selected-count');
+  const hint = document.getElementById('select-all-hint');
   if (selectedContactIds.size > 0) {
     bar.style.display = 'flex';
     count.textContent = `${selectedContactIds.size} kişi seçildi`;
+    if (hint) hint.style.display = 'none';
   } else {
     bar.style.display = 'none';
+    if (hint) hint.style.display = 'none';
   }
 }
 
@@ -1056,21 +1060,31 @@ function toggleContactSelect(id, cb) {
   updateBulkBar();
 }
 
-function toggleSelectAll(masterCb) {
-  const cbs = document.querySelectorAll('.contact-row-cb');
-  cbs.forEach(cb => {
-    cb.checked = masterCb.checked;
-    if (masterCb.checked) selectedContactIds.add(cb.dataset.id);
-    else selectedContactIds.delete(cb.dataset.id);
-  });
-  updateBulkBar();
+async function toggleSelectAll(masterCb) {
+  if (masterCb.checked) {
+    await selectAllContacts();
+  } else {
+    deselectAllContacts();
+  }
 }
 
-function selectAllContacts() {
-  const cbs = document.querySelectorAll('.contact-row-cb');
-  cbs.forEach(cb => { cb.checked = true; selectedContactIds.add(cb.dataset.id); });
-  document.getElementById('select-all-cb').checked = true;
-  updateBulkBar();
+async function selectAllContacts() {
+  try {
+    const search = document.getElementById('contact-search')?.value || '';
+    const group = document.getElementById('contact-group-filter')?.value || '';
+    const data = await api('GET', `/api/contacts?page=1&limit=99999&search=${encodeURIComponent(search)}&group=${group}`);
+    if (!data || !data.contacts) { toast('Kişiler yüklenemedi: ' + JSON.stringify(data), 'error'); return; }
+    selectedContactIds.clear();
+    data.contacts.forEach(c => selectedContactIds.add(c._id));
+    document.querySelectorAll('.contact-row-cb').forEach(cb => { cb.checked = true; });
+    document.getElementById('select-all-cb').checked = true;
+    updateBulkBar();
+    toast(`${selectedContactIds.size} kişi seçildi`, 'success');
+  } catch(e) {
+    toast('Hata: ' + e.message, 'error');
+    document.querySelectorAll('.contact-row-cb').forEach(cb => { cb.checked = true; selectedContactIds.add(cb.dataset.id); });
+    updateBulkBar();
+  }
 }
 
 function deselectAllContacts() {
